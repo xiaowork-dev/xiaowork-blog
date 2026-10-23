@@ -1,11 +1,11 @@
 # XiaoWork Blog
 
-> **当前状态：P4 Markdown 编辑器与文章发布已完成（2026-10-23）**：在账号（P2）与媒体（P3）之上，提供文章草稿/公开版本隔离、手动发布与更新、撤回与回收站、分类标签管理、Markdown 编辑器和最小公开文章页。完整博客前台、评论与其余后台功能尚未实现（P5 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
+> **当前状态：P5 博客前台与内容发现已完成（2026-10-23）**：公开前台（首页、文章详情、分类、标签、归档、搜索、关于页）、SEO（title/description/canonical/Open Graph、sitemap.xml、rss.xml、robots.txt、旧 Slug 301）、浅色/深色/跟随系统主题与浏览量统计已上线，后台 Markdown 编辑与发布沿用 P4。评论（P6）、后台完善（P7）与生产部署（P8）尚未实现。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
 ```text
-apps/web/                     Nuxt 4 SSR：首页占位、/auth/* 认证页面、/api/v1 同源代理、/health
+apps/web/                     Nuxt 4 SSR：公开博客、/auth/* 认证、/admin/* 后台、/api/v1 同源代理、sitemap/rss/robots、/health
 apps/api/                     Go + Chi + pgx，/health/live 和 /health/ready
 apps/api/db/migrations/       goose 版本化迁移（嵌入二进制）
 apps/api/db/queries/          sqlc 查询源 SQL
@@ -14,10 +14,12 @@ apps/api/cmd/blog-migrate/    迁移命令 up / status / version / down
 apps/api/cmd/blog-admin/      首个管理员初始化（仅运维命令）
 apps/api/internal/auth/       注册、验证、登录、会话、CSRF、限流、找回密码
 apps/api/internal/media/      图片校验、缩略图、本地存储、媒体 API、删除状态机、一致性检查
-apps/api/internal/article/    文章草稿、发布事务、Slug、撤回/回收站、分类标签、公开详情
+apps/api/internal/article/    文章草稿、发布事务、Slug、撤回/回收站、分类标签、公开列表/搜索/归档/浏览量
+apps/api/internal/site/       公开站点资料（/site）与关于页（/pages/about）
 scripts/e2e-auth.mjs          认证端到端自检
 scripts/e2e-media.mjs         媒体端到端自检（含容器重建后持久化校验）
 scripts/e2e-articles.mjs      文章端到端自检（草稿隔离、发布、旧 Slug 301、XSS、撤回/回收站）
+scripts/e2e-public.mjs        前台端到端自检（分页、分类标签归档、中文搜索、SEO、sitemap/RSS、浏览量）
 compose.yaml                  db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
 .data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
 docs/reference/               需求、架构、数据库、API、UI 规范
@@ -109,7 +111,7 @@ cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?s
 
 ## 验收门槛
 
-参见 `docs/handoffs/` 下各阶段交付记录（P0–P4）。
+参见 `docs/handoffs/` 下各阶段交付记录（P0–P5）。
 
 ## 图片与媒体（P3）
 
@@ -134,3 +136,13 @@ docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin
 - 分类与标签在 `/admin/taxonomy` 管理；公开文章地址为 `/posts/{slug}`（P4 为最小页面，完整阅读页在 P5）。
 - 文章端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-articles.mjs`（测试文章最后留在回收站）。
 - Markdown 渲染安全测试：`cd apps/web && pnpm test`。设计取舍见 `docs/adr/ADR-0004-P4文章与编辑器实现决策.md`。
+
+## 博客前台（P5）
+
+- 公开页面：`/`（最新文章，每页 10 篇）、`/posts/{slug}`、`/categories`、`/categories/{slug}`、`/tags`、`/tags/{slug}`、`/archives`（可按 `?year=` 筛选）、`/search?q=`、`/about`。PC 为“左侧个人栏 + 右侧内容”，手机为单栏。
+- 左侧个人栏、外链图标、顶部导航与关于页的内容来自数据库（`site_settings` 等表），后台编辑界面在 P7 提供；未配置时使用迁移写入的默认值。
+- 搜索是**关键词匹配**：用空格分隔多个词，全部命中才返回，中文短词可直接搜索；不提供语义搜索。
+- 浏览量：读者停留约 5 秒后才计数，同一浏览器 30 分钟内只计一次，机器人不计数，详见 `docs/adr/ADR-0005-P5博客前台与内容发现实现决策.md`。
+- `/sitemap.xml`、`/rss.xml`、`/robots.txt` 每次请求都读取公开 API，发布或撤回后立即生效。站点地址取自 `PUBLIC_BASE_URL`（compose 中传给 Nuxt 的 `NUXT_PUBLIC_SITE_URL`），上线时必须设置为正式的 HTTPS 域名。
+- 日期显示与归档统一使用 `Asia/Shanghai` 时区。
+- 前台端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-public.mjs`（测试文章最后留在回收站）。加 `--seed FILE` 可保留一组示例文章用于人工检查，之后用 `--cleanup FILE` 移入回收站。

@@ -48,6 +48,13 @@ func (s *Service) RateLimit(ctx context.Context, action string, limit int, windo
 	return s.limiter.hit(ctx, rateRule{Action: action, Limit: limit, Window: window}, subject)
 }
 
+// VisitorKey identifies the browser context of a request (session or anonymous CSRF cookie) for
+// approximate de-duplication such as article views. It is only ever used as a hashed limiter subject.
+func (s *Service) VisitorKey(r *http.Request) (string, bool) { return s.csrfContext(r) }
+
+// ClientIP is the caller address after the trusted-proxy rules (TRUSTED_PROXY_CIDRS).
+func (s *Service) ClientIP(r *http.Request) string { return s.clientIP(r) }
+
 // ---- cookies ----
 
 func (s *Service) sessionCookieName() string {

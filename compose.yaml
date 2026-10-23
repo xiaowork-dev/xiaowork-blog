@@ -90,6 +90,8 @@ services:
       NITRO_HOST: 0.0.0.0
       NITRO_PORT: '3000'
       NUXT_API_INTERNAL_URL: 'http://api:8080'
+      # Canonical / Open Graph / RSS / sitemap origin; the same browser-facing origin the API uses.
+      NUXT_PUBLIC_SITE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL must be set}
     ports:
       - '127.0.0.1:${WEB_PORT:-3000}:3000'
     depends_on:

@@ -82,8 +82,105 @@ function taskLists(md: MarkdownIt) {
 
 export type Render = (source: string) => string
 
+export interface TocEntry {
+  level: number
+  id: string
+  text: string
+}
+
+export interface RenderedDocument {
+  html: string
+  toc: TocEntry[]
+}
+
+export interface ReadingOptions {
+  /**
+   * Level the highest body heading is moved to (default 2), so the page title stays the only <h1>:
+   * a body using "#" is shifted down one level, a body that already starts at "##" is left as written.
+   */
+  topLevel?: number
+  /** Heading levels (after the offset) listed in the table of contents. */
+  tocLevels?: number[]
+}
+
+/** Anchor id from heading text: letters (incl. CJK) and digits kept, whitespace → "-". */
+export function headingSlug(text: string): string {
+  const slug = text.trim().toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\p{L}\p{N}_-]/gu, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return slug || 'section'
+}
+
+interface ReadingEnv {
+  toc: TocEntry[]
+  ids: Map<string, number>
+}
+
+/**
+ * Reading mode for public pages: heading ids + anchor links + table of contents, and code blocks with
+ * a language label and a copy button (wired up by the page). Ids and labels are escaped by markdown-it.
+ */
+function readingMode(md: MarkdownIt, opts: Required<ReadingOptions>) {
+  const escape = md.utils.escapeHtml
+  md.core.ruler.push('heading-ids', (state: StateCore) => {
+    const env = state.env as unknown as ReadingEnv
+    if (!env.ids) return
+    const tokens = state.tokens
+    const levels = tokens.filter(t => t.type === 'heading_open').map(t => Number(t.tag.slice(1)))
+    const offset = levels.length ? Math.max(0, opts.topLevel - Math.min(...levels)) : 0
+    for (let i = 0; i < tokens.length; i++) {
+      const open = tokens[i]!
+      if (open.type !== 'heading_open') continue
+      const level = Math.min(6, Number(open.tag.slice(1)) + offset)
+      open.tag = `h${level}`
+      tokens[i + 2]!.tag = `h${level}`
+      const text = (tokens[i + 1]!.children ?? [])
+        .filter(c => c.type === 'text' || c.type === 'code_inline')
+        .map(c => c.content).join('')
+      const base = headingSlug(text)
+      const n = env.ids.get(base) ?? 0
+      env.ids.set(base, n + 1)
+      const id = n === 0 ? base : `${base}-${n + 1}`
+      open.attrSet('id', id)
+      if (opts.tocLevels.includes(level) && text.trim()) env.toc.push({ level, id, text: text.trim() })
+    }
+  })
+  const fallback: RendererRule = (tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options)
+  const defaultHeadingClose = md.renderer.rules.heading_close ?? fallback
+  md.renderer.rules.heading_close = (tokens, idx, options, env, self) => {
+    const id = tokens[idx - 2]?.attrGet('id')
+    const anchor = id ? `<a class="heading-anchor" href="#${escape(String(id))}" aria-label="链接到此标题">#</a>` : ''
+    return anchor + defaultHeadingClose(tokens, idx, options, env, self)
+  }
+  const defaultFence = md.renderer.rules.fence!
+  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+    const lang = tokens[idx]!.info.trim().split(/\s+/)[0] ?? ''
+    const label = lang ? `<span class="code-lang">${escape(lang)}</span>` : '<span class="code-lang">text</span>'
+    return `<div class="code-block"><div class="code-head">${label}<button type="button" class="code-copy">复制</button></div>`
+      + defaultFence(tokens, idx, options, env, self) + '</div>\n'
+  }
+}
+
+/** Renderer for public reading pages: returns the HTML together with its table of contents. */
+export function createDocumentRenderer(hl: HighlighterCore | null, opts: ReadingOptions = {}): (source: string) => RenderedDocument {
+  const md = buildMarkdown(hl)
+  readingMode(md, { topLevel: opts.topLevel ?? 2, tocLevels: opts.tocLevels ?? [2, 3] })
+  return (source) => {
+    const env: ReadingEnv = { toc: [], ids: new Map() }
+    const html = md.render(source, env as unknown as Record<string, unknown>)
+    return { html, toc: env.toc }
+  }
+}
+
 /** Creates a renderer; pass the loaded highlighter (or null to render code blocks unhighlighted). */
 export function createRenderer(hl: HighlighterCore | null): Render {
+  const md = buildMarkdown(hl)
+  return source => md.render(source)
+}
+
+function buildMarkdown(hl: HighlighterCore | null): MarkdownIt {
   const md: MarkdownIt = new MarkdownItCtor({
     html: false,
     linkify: true,
@@ -121,6 +218,5 @@ export function createRenderer(hl: HighlighterCore | null): Render {
   const defaultTable = md.renderer.rules.table_open ?? fallback
   md.renderer.rules.table_open = (tokens, idx, options, env, self) => '<div class="md-table">' + defaultTable(tokens, idx, options, env, self)
   md.renderer.rules.table_close = () => '</table></div>\n'
-
-  return source => md.render(source)
+  return md
 }

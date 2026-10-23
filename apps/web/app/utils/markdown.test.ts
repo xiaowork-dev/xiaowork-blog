@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { createRenderer, isSafeUrl, loadHighlighter, type Render } from './markdown'
+import { createDocumentRenderer, createRenderer, headingSlug, isSafeUrl, loadHighlighter, type Render } from './markdown'
 
 let render: Render
 
@@ -88,5 +88,53 @@ describe('supported Markdown', () => {
     const unknown = render('```brainfuck\n<b>x</b>\n```')
     expect(unknown).toContain('&lt;b&gt;x&lt;/b&gt;')
     expect(unknown).not.toContain('class="shiki')
+  })
+})
+
+describe('reading mode (public pages)', () => {
+  let doc: ReturnType<typeof createDocumentRenderer>
+  beforeAll(async () => {
+    doc = createDocumentRenderer(await loadHighlighter())
+  })
+
+  it('moves "#" headings below the page <h1>, adds unique ids, anchors and a TOC', () => {
+    const { html, toc } = doc(['# 项目背景', '## 技术 选型', '### Go `1.27`', '## 技术 选型', '#### 细节'].join('\n\n'))
+    expect(html).not.toContain('<h1')
+    expect(html).toContain('<h2 id="项目背景">项目背景<a class="heading-anchor" href="#项目背景" aria-label="链接到此标题">#</a></h2>')
+    expect(html).toContain('<h3 id="技术-选型">')
+    expect(html).toContain('<h3 id="技术-选型-2">')
+    expect(html).toContain('<h4 id="go-127">')
+    expect(html).toContain('<h5 id="细节">')
+    expect(toc).toEqual([
+      { level: 2, id: '项目背景', text: '项目背景' },
+      { level: 3, id: '技术-选型', text: '技术 选型' },
+      { level: 3, id: '技术-选型-2', text: '技术 选型' },
+    ])
+    // a body that already starts at "##" keeps its levels
+    const plain = doc('## 背景\n\n### 细节')
+    expect(plain.html).toContain('<h2 id="背景">')
+    expect(plain.html).toContain('<h3 id="细节">')
+    expect(plain.toc.map(t => t.level)).toEqual([2, 3])
+    // a second render starts a fresh id namespace
+    expect(doc('# 项目背景').toc[0]!.id).toBe('项目背景')
+  })
+
+  it('keeps ids and code labels inert', () => {
+    const { html } = doc(['# "><img src=x onerror=alert(1)>', '', '```"><script>alert(1)</script>', 'x', '```'].join('\n'))
+    assertInert(html)
+    expect(headingSlug('"><img src=x onerror=alert(1)>')).toBe('img-srcx-onerroralert1')
+    expect(html).toContain('<span class="code-lang">&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;</span>')
+  })
+
+  it('wraps code blocks with a language label and a copy button', () => {
+    const { html } = doc('```go\nfmt.Println(1)\n```\n\n```\nplain\n```')
+    expect(html).toContain('<div class="code-block"><div class="code-head"><span class="code-lang">go</span><button type="button" class="code-copy">复制</button></div><pre class="shiki')
+    expect(html).toContain('<span class="code-lang">text</span>')
+  })
+
+  it('the editor renderer stays unchanged (no ids, no copy buttons)', () => {
+    const html = render('# 标题\n\n```go\nx\n```')
+    expect(html).toContain('<h1>标题</h1>')
+    expect(html).not.toContain('code-copy')
   })
 })

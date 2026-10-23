@@ -142,9 +142,9 @@ r = await http('POST', `/api/v1/admin/articles/${id}/publish`, { json: { expecte
 log(r.status === 200 && r.data.data.published_changed === false && r.data.data.publication_revision === 1, 'repeat publish is idempotent')
 
 let page = await http('GET', `/posts/${slug}`, { auth: false })
-log(page.status === 200 && page.text.includes(`E2E V1 ${run}`) && page.text.includes('<h1>第一版标题</h1>'), 'SSR public page renders the published Markdown')
+log(page.status === 200 && page.text.includes(`E2E V1 ${run}`) && page.text.includes('<h2 id="第一版标题">第一版标题'), 'SSR public page renders the published Markdown')
 log(page.text.includes('class="shiki') && page.text.includes('task-checkbox'), 'code highlighting and task list rendered')
-const bodyHtml = page.text.slice(page.text.indexOf('class="md-body"'))
+const bodyHtml = page.text.slice(page.text.indexOf('class="md-body'))
 log(bodyHtml.includes('&lt;script&gt;alert') && !/<script>alert\("xss"\)/.test(bodyHtml) && !bodyHtml.includes('href="javascript:'), 'XSS payload in Markdown is escaped, javascript: link not rendered')
 log((await http('GET', imgUrl, { auth: false })).status === 200, 'published image is public')
 

@@ -25,16 +25,17 @@ import (
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/store"
 )
 
-// Service implements /admin/articles, /admin/categories, /admin/tags and the public article detail.
+// Service implements /admin/articles, /admin/categories, /admin/tags and the public article endpoints.
 type Service struct {
 	pool     *pgxpool.Pool
 	q        *store.Queries
 	siteHost string // host of PUBLIC_BASE_URL; absolute /media URLs on it count as references
+	guard    Guard
 	logger   *slog.Logger
 }
 
-func NewService(pool *pgxpool.Pool, siteHost string, logger *slog.Logger) *Service {
-	return &Service{pool: pool, q: store.New(pool), siteHost: siteHost, logger: logger}
+func NewService(pool *pgxpool.Pool, siteHost string, guard Guard, logger *slog.Logger) *Service {
+	return &Service{pool: pool, q: store.New(pool), siteHost: siteHost, guard: guard, logger: logger}
 }
 
 const (
@@ -43,6 +44,7 @@ const (
 	maxSummaryRunes = 500
 	maxSlugLen      = 160
 	maxTagsPerDraft = 20
+	maxTermSlugLen  = 100
 )
 
 var (
@@ -72,11 +74,6 @@ func (s *Service) AdminRoutes(r chi.Router) {
 	r.Delete("/articles/{id}", s.handle(s.trash))
 	r.Post("/articles/{id}/restore", s.handle(s.restore))
 	s.taxonomyRoutes(r)
-}
-
-// PublicRoutes mounts GET /articles/{slug} (permission P).
-func (s *Service) PublicRoutes(r chi.Router) {
-	r.Get("/articles/{slug}", s.handle(s.publicDetail))
 }
 
 func (s *Service) handle(fn func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {

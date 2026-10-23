@@ -27,6 +27,7 @@ import (
 	xmail "github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/mail"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/media"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/platform/database/dbtest"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/site"
 )
 
 const siteOrigin = "http://127.0.0.1:3000"
@@ -56,8 +57,8 @@ func newHarness(t *testing.T) *harness {
 	mediaSvc := media.NewService(h.pool, authSvc, storage, media.Options{
 		Root: root, Media: media.Limits{MaxBytes: 2 << 20, MaxPixels: 20_000_000}, Avatar: media.Limits{MaxBytes: 1 << 20, MaxPixels: 4_000_000},
 	}, logger)
-	articles := article.NewService(h.pool, "127.0.0.1:3000", logger)
-	h.srv = httptest.NewServer(httpapi.NewRouter(httpapi.Deps{Ping: h.pool.Ping, Auth: authSvc, Media: mediaSvc, Articles: articles, Logger: logger}))
+	articles := article.NewService(h.pool, "127.0.0.1:3000", authSvc, logger)
+	h.srv = httptest.NewServer(httpapi.NewRouter(httpapi.Deps{Ping: h.pool.Ping, Auth: authSvc, Media: mediaSvc, Articles: articles, Site: site.NewService(h.pool), Logger: logger}))
 	t.Cleanup(h.srv.Close)
 	return h
 }
@@ -67,6 +68,7 @@ type client struct {
 	http *http.Client
 	id   uuid.UUID
 	csrf string
+	ua   string // User-Agent; empty keeps Go's default (which the view counter treats as a bot)
 }
 
 func (h *harness) user(role string) *client {
@@ -147,6 +149,9 @@ func (c *client) raw(method, path string, body io.Reader, contentType string) re
 	}
 	if c.csrf != "" {
 		req.Header.Set("X-CSRF-Token", c.csrf)
+	}
+	if c.ua != "" {
+		req.Header.Set("User-Agent", c.ua)
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {

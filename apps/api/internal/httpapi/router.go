@@ -12,6 +12,7 @@ import (
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/media"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/platform/httpx"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/site"
 )
 
 type PingFunc func(context.Context) error
@@ -22,6 +23,7 @@ type Deps struct {
 	Auth     *auth.Service
 	Media    *media.Service
 	Articles *article.Service
+	Site     *site.Service
 	Logger   *slog.Logger
 }
 
@@ -41,7 +43,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.MethodNotAllowed(httpx.MethodNotAllowed)
 
 	r.Get("/health/live", func(w http.ResponseWriter, req *http.Request) {
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P4"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P5"})
 	})
 	r.Get("/health/ready", func(w http.ResponseWriter, req *http.Request) {
 		ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
@@ -50,7 +52,7 @@ func NewRouter(d Deps) *chi.Mux {
 			writeHealth(w, http.StatusServiceUnavailable, map[string]any{"status": "unavailable"})
 			return
 		}
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P4"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P5"})
 	})
 
 	if d.Auth == nil {
@@ -75,6 +77,9 @@ func NewRouter(d Deps) *chi.Mux {
 			d.Auth.Routes(json)
 			if d.Articles != nil {
 				d.Articles.PublicRoutes(json)
+			}
+			if d.Site != nil {
+				d.Site.PublicRoutes(json)
 			}
 		})
 		// Every /admin path is guarded before routing, so non-admins get 401/403 and never learn which

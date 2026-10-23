@@ -67,7 +67,7 @@ func (in termInput) apply(t *term, withDescription bool) map[string][]string {
 	if n := utf8.RuneCountInString(t.name); n < 1 || n > 60 {
 		f["name"] = []string{"INVALID_LENGTH"}
 	}
-	if !validSlug(t.slug, 100) {
+	if !validSlug(t.slug, maxTermSlugLen) {
 		f["slug"] = []string{"INVALID_SLUG"}
 	}
 	if utf8.RuneCountInString(t.description.String) > 300 {

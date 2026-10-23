@@ -9,8 +9,16 @@
   font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   color: var(--text); background: var(--bg); line-height: 1.75;
 }
+/* Dark: explicit choice (data-theme="dark") or the system preference unless "light" was chosen (UI/UX §2.2, PRD 4.2). */
+:root[data-theme="dark"] {
+  --bg: #0b1018; --card: #151c26; --text: #f3f5f8; --muted: #97a3b6; --border: #273241;
+  --accent: #60a5fa; --accent-soft: #14233a; --accent-border: #23406a; --on-accent: #0b1018;
+  --success: #4ade80; --success-bg: #0f2a1a; --warning: #fbbf24; --warning-bg: #2b2210;
+  --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(96, 165, 250, .45);
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b1018; --card: #151c26; --text: #f3f5f8; --muted: #97a3b6; --border: #273241;
     --accent: #60a5fa; --accent-soft: #14233a; --accent-border: #23406a; --on-accent: #0b1018;
     --success: #4ade80; --success-bg: #0f2a1a; --warning: #fbbf24; --warning-bg: #2b2210;
@@ -25,23 +33,7 @@ a { color: var(--accent) }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
 
 .shell { max-width: 1200px; margin: auto; padding: 0 24px }
-.topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border) }
-.brand { font-size: 20px; font-weight: 750; color: var(--text); text-decoration: none }
-.account { display: flex; align-items: center; gap: 16px; font-size: 15px }
-.account a { text-decoration: none }
 .who { color: var(--muted); max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-
-/* Home placeholder: left profile card + right content (UI/UX §0.1). */
-.workspace { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 48px; padding: 40px 0 }
-.profile { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 32px 22px; text-align: center; height: max-content }
-.avatar { display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); border-radius: 50%; font-size: 28px; font-weight: 800; margin: auto; width: 70px; height: 70px }
-.profile h2 { margin: 12px 0 4px }
-.profile p, .content p { color: var(--muted) }
-.content { padding: 32px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 14px }
-.kicker { color: var(--accent); font-size: 13px; font-weight: 700 }
-.content h1 { font-size: 30px; margin: 12px 0 18px }
-.note { padding: 16px; background: var(--bg); border-radius: 10px; margin: 24px 0 }
-.disclaimer { font-size: 14px }
 
 /* Auth pages: centred narrow card (UI/UX §6.1). */
 .auth-page { display: flex; flex-direction: column; align-items: center; padding: 48px 0 64px }
@@ -91,16 +83,12 @@ a { color: var(--accent) }
 
 @media (max-width: 767px) {
   .shell { padding: 0 16px }
-  .workspace { grid-template-columns: 1fr; gap: 20px; padding: 22px 0 }
-  .profile { padding: 20px }
-  .content { padding: 24px }
-  .content h1 { font-size: 23px }
-  .topbar { height: 64px }
   .auth-page { padding: 24px 0 40px }
   .auth-card { padding: 24px 20px }
 }
 
 /* ---- Admin frame (UI/UX §7.1) ---- */
+.admin-top .brand { font-size: 20px; font-weight: 750; color: var(--text); text-decoration: none }
 .admin-shell { min-height: 100vh }
 .admin-top { height: 60px; display: flex; align-items: center; gap: 14px; padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--card) }
 .flag { font-size: 12px; border: 1px solid var(--accent-border); color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px }

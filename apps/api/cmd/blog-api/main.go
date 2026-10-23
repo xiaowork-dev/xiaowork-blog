@@ -17,6 +17,7 @@ import (
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/httpapi"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/mail"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/media"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/site"
 )
 
 func main() {
@@ -61,12 +62,12 @@ func main() {
 		MinFreeBytes: 256 << 20,
 	}, logger)
 	go mediaService.RunJanitor(ctx, time.Hour)
-	articleService := article.NewService(db, cfg.PublicBaseURL.Host, logger)
+	articleService := article.NewService(db, cfg.PublicBaseURL.Host, authService, logger)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			Ping: db.Ping, Auth: authService, Media: mediaService, Articles: articleService, Logger: logger,
+			Ping: db.Ping, Auth: authService, Media: mediaService, Articles: articleService, Site: site.NewService(db), Logger: logger,
 		}),
 		// Body/response deadlines are set per request (httpx.Deadlines) so uploads and downloads can extend them.
 		ReadHeaderTimeout: 5 * time.Second,

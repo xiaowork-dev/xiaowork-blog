@@ -1,4 +1,4 @@
-import { createRenderer, loadHighlighter, type Render } from '~/utils/markdown'
+import { createDocumentRenderer, createRenderer, loadHighlighter, type Render } from '~/utils/markdown'
 
 /** Renderer with syntax highlighting; awaits Shiki once (used by SSR pages). */
 export async function useMarkdownRenderer(): Promise<Render> {
@@ -20,4 +20,9 @@ export function useLiveMarkdown() {
     }
   })
   return render
+}
+
+/** Public reading renderer (heading ids, TOC, code copy buttons) with highlighting; awaited by SSR pages. */
+export async function useDocumentRenderer() {
+  return createDocumentRenderer(await loadHighlighter())
 }
