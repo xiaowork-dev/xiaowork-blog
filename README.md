@@ -1,6 +1,6 @@
 # XiaoWork Blog — P0 工程骨架
 
-> **当前状态：P0 工程骨架，本地 Docker Compose 集成验证已通过（2026-10-23，见 `docs/handoffs/P0_交付记录.md`）**。尚无真实文章、用户或评论功能。尚未初始化 Git / 连接 GitHub，也未部署 VPS。
+> **当前状态：P0 工程骨架，本地 Docker Compose 集成验证已通过（2026-10-23，见 `docs/handoffs/P0_交付记录.md`）**。尚无真实文章、用户或评论功能。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `p0-checks`；尚未部署 VPS。
 
 ## 目录
 
@@ -61,4 +61,4 @@ docs/handoffs/        每阶段交付记录
 
 ## 验收门槛
 
-参见 `docs/handoffs/P0_交付记录.md`。本地构建、测试、三容器健康与持久化已真实验证；Git 提交/推送尚待用户授权仓库后完成。
+参见 `docs/handoffs/P0_交付记录.md`。本地构建、测试、三容器健康与持久化已真实验证；P0 已推送 GitHub 并通过 CI。
