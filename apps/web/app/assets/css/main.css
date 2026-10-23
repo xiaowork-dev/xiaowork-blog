@@ -1,2 +1,101 @@
-:root{font-family:ui-sans-serif,system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#171b22;background:#f7f8fa;line-height:1.75}
-*{box-sizing:border-box}body{margin:0}a{color:#2563eb}.shell{max-width:1200px;margin:auto;padding:0 24px}.topbar{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e7eb}.brand{font-size:20px;font-weight:750}.flag{font-size:12px;border:1px solid #cfe0ff;color:#2563eb;background:#edf4ff;border-radius:999px;padding:4px 12px}.workspace{display:grid;grid-template-columns:260px minmax(0,1fr);gap:48px;padding:40px 0}.profile{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:32px 22px;text-align:center;height:max-content}.avatar{display:grid;place-items:center;background:#eaf2ff;color:#2563eb;border-radius:50%;font-size:28px;font-weight:800;margin:auto;width:70px;height:70px}.profile h2{margin:12px 0 4px}.profile p,.content p{color:#667085}.content{padding:32px 36px;background:white;border:1px solid #e5e7eb;border-radius:14px}.kicker{color:#2563eb;font-size:13px;font-weight:700}.content h1{font-size:30px;margin:12px 0 18px}.note{padding:16px;background:#f7f8fa;border-radius:10px;margin:24px 0}.disclaimer{font-size:14px}@media(max-width:767px){.shell{padding:0 16px}.workspace{grid-template-columns:1fr;gap:20px;padding:22px 0}.profile{padding:20px}.content{padding:24px}.content h1{font-size:23px}.topbar{height:64px}}
+/* Tokens follow UI/UX §2.2 (light / dark). */
+:root {
+  --bg: #f7f8fa; --card: #ffffff; --text: #171b22; --muted: #667085; --border: #e5e7eb;
+  --accent: #2563eb; --accent-soft: #edf4ff; --accent-border: #cfe0ff; --on-accent: #ffffff;
+  --success: #16803c; --success-bg: #ecfdf3; --warning: #b45309; --warning-bg: #fffbeb;
+  --error: #b42318; --error-bg: #fef3f2; --info-bg: #f2f6ff;
+  --radius: 12px; --focus: 0 0 0 3px rgba(37, 99, 235, .35);
+  color-scheme: light;
+  font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  color: var(--text); background: var(--bg); line-height: 1.75;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1018; --card: #151c26; --text: #f3f5f8; --muted: #97a3b6; --border: #273241;
+    --accent: #60a5fa; --accent-soft: #14233a; --accent-border: #23406a; --on-accent: #0b1018;
+    --success: #4ade80; --success-bg: #0f2a1a; --warning: #fbbf24; --warning-bg: #2b2210;
+    --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(96, 165, 250, .45);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg) }
+a { color: var(--accent) }
+:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
+
+.shell { max-width: 1200px; margin: auto; padding: 0 24px }
+.topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border) }
+.brand { font-size: 20px; font-weight: 750; color: var(--text); text-decoration: none }
+.account { display: flex; align-items: center; gap: 16px; font-size: 15px }
+.account a { text-decoration: none }
+.who { color: var(--muted); max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+
+/* Home placeholder: left profile card + right content (UI/UX §0.1). */
+.workspace { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 48px; padding: 40px 0 }
+.profile { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 32px 22px; text-align: center; height: max-content }
+.avatar { display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); border-radius: 50%; font-size: 28px; font-weight: 800; margin: auto; width: 70px; height: 70px }
+.profile h2 { margin: 12px 0 4px }
+.profile p, .content p { color: var(--muted) }
+.content { padding: 32px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 14px }
+.kicker { color: var(--accent); font-size: 13px; font-weight: 700 }
+.content h1 { font-size: 30px; margin: 12px 0 18px }
+.note { padding: 16px; background: var(--bg); border-radius: 10px; margin: 24px 0 }
+.disclaimer { font-size: 14px }
+
+/* Auth pages: centred narrow card (UI/UX §6.1). */
+.auth-page { display: flex; flex-direction: column; align-items: center; padding: 48px 0 64px }
+.auth-card { width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 32px }
+.auth-card h1 { font-size: 26px; margin: 0 0 4px }
+.auth-subtitle { color: var(--muted); margin: 0 0 20px; font-size: 15px }
+.auth-footer { color: var(--muted); font-size: 15px; margin-top: 20px }
+.auth-links { text-align: right; font-size: 14px; margin: 12px 0 0 }
+.stacked { display: grid; gap: 14px; margin-top: 8px }
+.muted { color: var(--muted); font-size: 14px; margin: 0 }
+
+.field { margin-bottom: 16px }
+.field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px }
+.field-control { position: relative }
+.field input {
+  width: 100%; min-height: 44px; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+}
+.field input:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus) }
+.field input[aria-invalid="true"] { border-color: var(--error) }
+.field-control:has(.reveal) input { padding-right: 64px }
+.reveal {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); min-height: 32px; padding: 0 10px;
+  font: inherit; font-size: 13px; color: var(--accent); background: transparent; border: 0; border-radius: 8px; cursor: pointer;
+}
+.field-hint { margin: 6px 0 0; font-size: 13px; color: var(--muted) }
+.field-error { margin: 6px 0 0; font-size: 13px; color: var(--error); font-weight: 600 }
+
+.button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px;
+  font: inherit; font-size: 16px; font-weight: 600; color: var(--on-accent); background: var(--accent);
+  border: 1px solid var(--accent); border-radius: 10px; cursor: pointer; text-decoration: none;
+}
+.button:disabled { opacity: .6; cursor: not-allowed }
+.button-block { width: 100% }
+.button-small { min-height: 36px; padding: 0 14px; font-size: 14px }
+.button-secondary { color: var(--accent); background: transparent }
+.link-button { font: inherit; color: var(--accent); background: none; border: 0; padding: 4px; cursor: pointer }
+
+.alert { margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; font-size: 14px; border: 1px solid transparent }
+.alert-success { background: var(--success-bg); color: var(--success); border-color: currentColor }
+.alert-warning { background: var(--warning-bg); color: var(--warning); border-color: currentColor }
+.alert-error { background: var(--error-bg); color: var(--error); border-color: currentColor }
+.alert-info { background: var(--info-bg); color: var(--text); border-color: var(--accent-border) }
+.alert strong { word-break: break-all }
+.resend .button { width: 100% }
+
+@media (max-width: 767px) {
+  .shell { padding: 0 16px }
+  .workspace { grid-template-columns: 1fr; gap: 20px; padding: 22px 0 }
+  .profile { padding: 20px }
+  .content { padding: 24px }
+  .content h1 { font-size: 23px }
+  .topbar { height: 64px }
+  .auth-page { padding: 24px 0 40px }
+  .auth-card { padding: 24px 20px }
+}

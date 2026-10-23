@@ -10,10 +10,10 @@ import (
 )
 
 func TestLiveness(t *testing.T) {
-	handler := NewRouter(func(context.Context) error { return nil })
+	handler := NewRouter(Deps{Ping: func(context.Context) error { return nil }})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health/live", nil))
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"stage":"P0"`) {
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"stage":"P2"`) {
 		t.Fatalf("unexpected response: %d %s", rec.Code, rec.Body.String())
 	}
 }
@@ -28,12 +28,22 @@ func TestReadiness(t *testing.T) {
 		{"database_down", errors.New("unreachable"), http.StatusServiceUnavailable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewRouter(func(context.Context) error { return tc.err })
+			handler := NewRouter(Deps{Ping: func(context.Context) error { return tc.err }})
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health/ready", nil))
 			if rec.Code != tc.want {
 				t.Fatalf("status %d, want %d", rec.Code, tc.want)
 			}
 		})
+	}
+}
+
+func TestUnknownRouteUsesErrorEnvelope(t *testing.T) {
+	handler := NewRouter(Deps{Ping: func(context.Context) error { return nil }})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/nope", nil))
+	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), `"code":"NOT_FOUND"`) ||
+		rec.Header().Get("X-Request-Id") == "" {
+		t.Fatalf("unexpected response: %d %s", rec.Code, rec.Body.String())
 	}
 }

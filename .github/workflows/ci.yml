@@ -55,8 +55,14 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Test SMTP server for the real mailer test; never a public mailbox.
+      mailpit:
+        image: axllent/mailpit:v1.32.0
+        ports: ['1025:1025', '8025:8025']
     env:
       TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres?sslmode=disable
+      TEST_SMTP_ADDR: localhost:1025
+      TEST_MAILPIT_API: http://localhost:8025
       REQUIRE_DB_TESTS: '1'
     steps:
       - uses: actions/checkout@v5
@@ -78,6 +84,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.22.1'
       - run: cp .env.example .env
       - run: docker compose --env-file .env config --quiet
       - run: docker compose --env-file .env up -d --build --wait --wait-timeout 300
@@ -88,5 +97,14 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:8080/health/ready
           curl --fail --silent --show-error http://127.0.0.1:3000/health
           test "$(docker compose --env-file .env exec -T db sh -c 'psql -tA -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT max(version_id) FROM goose_db_version WHERE is_applied"')" = "7"
+      # Browser-path auth flow: Nuxt proxy → Go API → PostgreSQL, mail through SMTP into Mailpit.
+      - run: node scripts/e2e-auth.mjs http://127.0.0.1:3000 http://127.0.0.1:8025
+      - name: First-admin bootstrap is single-use
+        run: |
+          PW="$(openssl rand -hex 16)"  # throwaway, generated per run
+          printf '%s\n' "$PW" | docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api create-admin -email admin@example.test -nickname CI
+          ! printf '%s\n' "$PW" | docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api create-admin -email admin2@example.test -nickname CI2
+      - if: failure()
+        run: docker compose --env-file .env logs api web
       - if: always()
         run: docker compose --env-file .env down

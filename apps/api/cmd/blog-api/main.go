@@ -11,24 +11,25 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/config"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/httpapi"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/mail"
 )
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		logger.Error("DATABASE_URL is required")
+	slog.SetDefault(logger)
+	cfg, err := config.Load()
+	if err != nil {
+		// Validation messages name variables, never their values.
+		logger.Error("invalid configuration", "error", err.Error())
 		os.Exit(1)
-	}
-	address := os.Getenv("HTTP_ADDR")
-	if address == "" {
-		address = ":8080"
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
 	defer stop()
-	db, err := pgxpool.New(ctx, databaseURL)
+	db, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		logger.Error("could not create DB pool", "error", err)
 		os.Exit(1)
@@ -42,16 +43,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	authService := auth.NewService(db, cfg, mail.NewSMTP(cfg.SMTP), auth.NewPasswordHasher(auth.DefaultArgon2, 4), logger)
+	go authService.RunJanitor(ctx, time.Hour)
+
 	srv := &http.Server{
-		Addr:              address,
-		Handler:           httpapi.NewRouter(db.Ping),
+		Addr:              cfg.HTTPAddr,
+		Handler:           httpapi.NewRouter(httpapi.Deps{Ping: db.Ping, Auth: authService, Logger: logger}),
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    32 << 10,
 	}
 
 	serverErr := make(chan error, 1)
 	go func() { serverErr <- srv.ListenAndServe() }()
-	logger.Info("P0 API listening", "addr", address)
+	logger.Info("API listening", "config", cfg.String())
 
 	select {
 	case <-ctx.Done():
@@ -67,4 +74,5 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("graceful shutdown failed", "error", err)
 	}
+	authService.Wait() // let queued e-mails finish
 }

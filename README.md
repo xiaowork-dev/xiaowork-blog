@@ -1,17 +1,20 @@
 # XiaoWork Blog
 
-> **当前状态：P1 数据库层已完成（2026-10-23）**：24 张表的 goose 迁移、sqlc/pgx 数据访问代码与 PostgreSQL 集成测试。尚无注册登录、文章、评论等业务 API（P2 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
+> **当前状态：P2 用户认证已完成（2026-10-23）**：注册、邮箱验证、登录/退出、找回密码、修改密码/邮箱、管理员初始化，以及统一响应、CSRF、限流等 API 基础设施。文章、评论、媒体与后台尚未实现（P3 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
 ```text
-apps/web/                     Nuxt 4 SSR，占位首页及 /health
+apps/web/                     Nuxt 4 SSR：首页占位、/auth/* 认证页面、/api/v1 同源代理、/health
 apps/api/                     Go + Chi + pgx，/health/live 和 /health/ready
 apps/api/db/migrations/       goose 版本化迁移（嵌入二进制）
 apps/api/db/queries/          sqlc 查询源 SQL
 apps/api/internal/store/      sqlc 生成的类型安全数据访问代码（勿手改）+ 事务封装
 apps/api/cmd/blog-migrate/    迁移命令 up / status / version / down
-compose.yaml                  db / migrate（一次性）/ api / web、健康检查
+apps/api/cmd/blog-admin/      首个管理员初始化（仅运维命令）
+apps/api/internal/auth/       注册、验证、登录、会话、CSRF、限流、找回密码
+scripts/e2e-auth.mjs          认证端到端自检
+compose.yaml                  db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
 .data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
 docs/reference/               需求、架构、数据库、API、UI 规范
 docs/adr/                     设计决策记录
@@ -31,11 +34,24 @@ docs/handoffs/                每阶段交付记录
 1. 在仓库根目录复制 `.env.example` 为 `.env`（Windows PowerShell：`Copy-Item .env.example .env`）。该文件不进 Git。
 2. 把 `POSTGRES_PASSWORD` 换成你自己的随机值（仅字母、数字、`_`、`-`，因为它会原样拼入 `DATABASE_URL`）；示例值只用于 loopback 本地开发。注意：数据库卷首次初始化后再改密码不会生效。
 3. 运行 `docker compose --env-file .env config --quiet` 验证配置。
-4. 运行 `docker compose --env-file .env up --build -d --wait`（`--wait` 会等到三个服务健康后才返回）。
-5. 运行 `docker compose ps -a` 确认 `db/api/web` 均为 `healthy`、`migrate` 为 `Exited (0)`；或运行 `bash scripts/verify-p0.sh` 一次性检查配置与全部健康端点。
-6. 浏览器访问 `http://127.0.0.1:3000/`，应出现 **P0 骨架占位** 页面；`http://127.0.0.1:3000/health` 返回 JSON。
-7. `curl http://127.0.0.1:8080/health/live` 和 `curl http://127.0.0.1:8080/health/ready` 返回 JSON，其中 ready 会检测真实 PostgreSQL 连通性。
-8. 停止：`docker compose down`（**不要**添加 `-v`，否则可能清除数据库卷）。
+4. 运行 `docker compose --env-file .env up --build -d --wait`（`--wait` 会等到各服务健康后才返回）。
+5. 运行 `docker compose ps -a` 确认 `db/api/web/mailpit` 均在运行（前三者 `healthy`）、`migrate` 为 `Exited (0)`；或运行 `bash scripts/verify-p0.sh` 一次性检查配置与全部健康端点。
+6. 浏览器访问 `http://127.0.0.1:3000/`（请用 `127.0.0.1`，它就是 `PUBLIC_BASE_URL`；用 `localhost` 打开会被 CSRF Origin 检查拒绝写操作），右上角可注册/登录；`http://127.0.0.1:3000/health` 返回 JSON。
+7. 本地发出的所有邮件（验证、重置、换邮箱）都在 Mailpit：`http://127.0.0.1:8025`，不会发往真实邮箱。
+8. `curl http://127.0.0.1:8080/health/live` 和 `curl http://127.0.0.1:8080/health/ready` 返回 JSON，其中 ready 会检测真实 PostgreSQL 连通性。
+9. 端到端自检（需 Node 24）：`node scripts/e2e-auth.mjs`（注册→邮件→验证→登录→退出→找回密码，经 Nuxt 代理与 Mailpit）。
+10. 停止：`docker compose down`（**不要**添加 `-v`，否则可能清除数据库卷）。
+
+## 账号与管理员
+
+- 公开注册只能得到普通用户。**首个管理员**只能由运维命令创建（密码从标准输入读取，不出现在命令行或环境变量里；已存在管理员时拒绝执行）：
+
+```bash
+docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api create-admin -email you@example.com -nickname XiaoWork < admin-password.txt
+```
+
+- 生产 SMTP：在 `.env` 设置 `SMTP_HOST/PORT/TLS/USERNAME/FROM`，密码优先用 `SMTP_PASSWORD_FILE` 指向挂载的密钥文件；`PUBLIC_BASE_URL` 必须是 https 正式域名，`APP_SECRET_KEY` 用 `openssl rand -base64 48` 生成。配置有误时 API 启动即失败并指出变量名（不回显取值）。
+- 认证细节与安全取舍见 `docs/adr/ADR-0002-P2认证实现决策.md`。
 
 ## 直接开发（可选）
 
@@ -76,7 +92,8 @@ docker run -d --name xiaowork-blog-testdb --tmpfs /var/lib/postgresql -e POSTGRE
 cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?sslmode=disable" REQUIRE_DB_TESTS=1 go test -count=1 ./...
 ```
 
-  未设置 `TEST_DATABASE_URL` 时这些测试会被跳过；CI 设置 `REQUIRE_DB_TESTS=1`，缺库即失败。
+  未设置 `TEST_DATABASE_URL` 时这些测试会被跳过；CI 设置 `REQUIRE_DB_TESTS=1`，缺库即失败。真实 SMTP 投递测试另需 `TEST_SMTP_ADDR`、`TEST_MAILPIT_API` 指向一个 Mailpit（`REQUIRE_DB_TESTS=1` 时同样必需）。
+- Windows 本机若 `go test` 报 `fork/exec … Access is denied`（安全软件拦截刚生成的测试程序），可改为 `go test -c -o <dir>/x.test.exe ./internal/auth/` 后直接运行该程序。
 
 ## 安全与数据
 
@@ -88,4 +105,4 @@ cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?s
 
 ## 验收门槛
 
-参见 `docs/handoffs/P0_交付记录.md`、`docs/handoffs/P1_交付记录.md`。
+参见 `docs/handoffs/` 下各阶段交付记录（P0、P1、P2）。
