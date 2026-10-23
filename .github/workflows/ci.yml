@@ -1,4 +1,4 @@
-name: p0-checks
+name: ci
 on:
   push:
   pull_request:
@@ -36,9 +36,57 @@ jobs:
       - run: go vet ./...
         working-directory: apps/api
       - run: test -z "$(gofmt -l apps/api)"
-  compose-static:
+      # Generated code must match db/queries + db/migrations.
+      - name: sqlc diff and vet
+        run: |
+          docker run --rm -v "$PWD/apps/api:/src" -w /src sqlc/sqlc:1.31.0 diff
+          docker run --rm -v "$PWD/apps/api:/src" -w /src sqlc/sqlc:1.31.0 vet
+  db-integration:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        # Ephemeral CI-only server; trust auth avoids putting any password in the repository.
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres?sslmode=disable
+      REQUIRE_DB_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: apps/api/go.sum
+      - run: go test -race -count=1 -v ./...
+        working-directory: apps/api
+      - name: blog-migrate up is repeatable
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgres://postgres@localhost:5432/postgres?sslmode=disable
+        run: |
+          go run ./cmd/blog-migrate up
+          go run ./cmd/blog-migrate up
+          go run ./cmd/blog-migrate status
+  compose:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - run: cp .env.example .env
       - run: docker compose --env-file .env config --quiet
+      - run: docker compose --env-file .env up -d --build --wait --wait-timeout 300
+      - name: Health and migration checks
+        run: |
+          docker compose --env-file .env ps -a
+          docker compose --env-file .env logs migrate
+          curl --fail --silent --show-error http://127.0.0.1:8080/health/ready
+          curl --fail --silent --show-error http://127.0.0.1:3000/health
+          test "$(docker compose --env-file .env exec -T db sh -c 'psql -tA -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT max(version_id) FROM goose_db_version WHERE is_applied"')" = "7"
+      - if: always()
+        run: docker compose --env-file .env down

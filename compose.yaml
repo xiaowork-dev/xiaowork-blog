@@ -19,6 +19,24 @@ services:
       retries: 6
       start_period: 15s
 
+  # One-shot schema migration (goose, embedded SQL). Re-running on an up-to-date DB is a no-op.
+  # Shares the api build context/Dockerfile, so BuildKit reuses the same layers.
+  migrate:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+    entrypoint: ["/usr/local/bin/blog-migrate"]
+    command: ["up"]
+    restart: 'no'
+    environment:
+      DATABASE_URL: 'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
   api:
     build:
       context: ./apps/api
@@ -38,6 +56,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks: [internal]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health/ready"]

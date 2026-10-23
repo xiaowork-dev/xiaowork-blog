@@ -1,17 +1,22 @@
-# XiaoWork Blog — P0 工程骨架
+# XiaoWork Blog
 
-> **当前状态：P0 工程骨架，本地 Docker Compose 集成验证已通过（2026-10-23，见 `docs/handoffs/P0_交付记录.md`）**。尚无真实文章、用户或评论功能。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `p0-checks`；尚未部署 VPS。
+> **当前状态：P1 数据库层已完成（2026-10-23）**：24 张表的 goose 迁移、sqlc/pgx 数据访问代码与 PostgreSQL 集成测试。尚无注册登录、文章、评论等业务 API（P2 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
 ```text
-apps/web/             Nuxt 4 SSR，占位首页及 /health
-apps/api/             Go + Chi + pgx，/health/live 和 /health/ready
-compose.yaml          web / api / db 三容器、健康检查
-.data/media/          宿主机本地媒体持久化（运行时创建，不纳入 Git）
-docs/reference/       需求、架构、数据库、API、UI 规范
-docs/handoffs/        每阶段交付记录
-.github/workflows/    最小 CI
+apps/web/                     Nuxt 4 SSR，占位首页及 /health
+apps/api/                     Go + Chi + pgx，/health/live 和 /health/ready
+apps/api/db/migrations/       goose 版本化迁移（嵌入二进制）
+apps/api/db/queries/          sqlc 查询源 SQL
+apps/api/internal/store/      sqlc 生成的类型安全数据访问代码（勿手改）+ 事务封装
+apps/api/cmd/blog-migrate/    迁移命令 up / status / version / down
+compose.yaml                  db / migrate（一次性）/ api / web、健康检查
+.data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
+docs/reference/               需求、架构、数据库、API、UI 规范
+docs/adr/                     设计决策记录
+docs/handoffs/                每阶段交付记录
+.github/workflows/            CI
 ```
 
 ## 环境建议
@@ -27,7 +32,7 @@ docs/handoffs/        每阶段交付记录
 2. 把 `POSTGRES_PASSWORD` 换成你自己的随机值（仅字母、数字、`_`、`-`，因为它会原样拼入 `DATABASE_URL`）；示例值只用于 loopback 本地开发。注意：数据库卷首次初始化后再改密码不会生效。
 3. 运行 `docker compose --env-file .env config --quiet` 验证配置。
 4. 运行 `docker compose --env-file .env up --build -d --wait`（`--wait` 会等到三个服务健康后才返回）。
-5. 运行 `docker compose ps` 确认 `db/api/web` 均为 `healthy`；或运行 `bash scripts/verify-p0.sh` 一次性检查配置与全部健康端点。
+5. 运行 `docker compose ps -a` 确认 `db/api/web` 均为 `healthy`、`migrate` 为 `Exited (0)`；或运行 `bash scripts/verify-p0.sh` 一次性检查配置与全部健康端点。
 6. 浏览器访问 `http://127.0.0.1:3000/`，应出现 **P0 骨架占位** 页面；`http://127.0.0.1:3000/health` 返回 JSON。
 7. `curl http://127.0.0.1:8080/health/live` 和 `curl http://127.0.0.1:8080/health/ready` 返回 JSON，其中 ready 会检测真实 PostgreSQL 连通性。
 8. 停止：`docker compose down`（**不要**添加 `-v`，否则可能清除数据库卷）。
@@ -51,6 +56,28 @@ docs/handoffs/        每阶段交付记录
 - 媒体：宿主机 `./.data/media` 绑定到 API 容器 `/data/media`。API 以固定 UID/GID `10001:10001` 非 root 运行；**Linux 宿主机**首次启动前执行 `mkdir -p .data/media && sudo chown 10001:10001 .data/media`（Windows/macOS Docker Desktop 无需此步）。
 - `docker compose down` 与 `up --build --force-recreate` 均不会丢失上述数据；只有 `down -v` 或手动删除目录才会。容器卷**不是备份**，备份/恢复属于 P8。
 
+## 数据库迁移、sqlc 与数据库测试
+
+- Compose 启动时 `migrate` 服务先执行 `blog-migrate up`（成功后才启动 `api`）；已是最新版本时为空操作，可重复部署。查看状态：`docker compose --env-file .env run --rm migrate status`。
+- **生产/共享数据库不要执行 `down`**；回滚依赖备份恢复（DD §11.3）。升级前先做备份。
+- 修改 `db/migrations` 或 `db/queries` 后重新生成代码（Windows 无 cgo，使用官方镜像；PowerShell 中把 `$(pwd -W)` 换成 `${PWD}`）：
+
+```bash
+docker run --rm -v "$(pwd -W)/apps/api:/src" -w /src sqlc/sqlc:1.31.0 generate
+```
+
+- 数据库集成测试需要一个**独立的**测试 PostgreSQL（每个测试自动创建并删除临时库，绝不使用 Compose 的数据卷）：
+
+```bash
+docker run -d --name xiaowork-blog-testdb --tmpfs /var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust -p 127.0.0.1:55432:5432 postgres:18.6-alpine
+```
+
+```bash
+cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?sslmode=disable" REQUIRE_DB_TESTS=1 go test -count=1 ./...
+```
+
+  未设置 `TEST_DATABASE_URL` 时这些测试会被跳过；CI 设置 `REQUIRE_DB_TESTS=1`，缺库即失败。
+
 ## 安全与数据
 
 - 未实现的功能不提供伪装业务 API。
@@ -61,4 +88,4 @@ docs/handoffs/        每阶段交付记录
 
 ## 验收门槛
 
-参见 `docs/handoffs/P0_交付记录.md`。本地构建、测试、三容器健康与持久化已真实验证；P0 已推送 GitHub 并通过 CI。
+参见 `docs/handoffs/P0_交付记录.md`、`docs/handoffs/P1_交付记录.md`。
