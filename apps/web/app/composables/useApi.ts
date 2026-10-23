@@ -90,6 +90,16 @@ export function useApi() {
     throw new ApiError(403, 'CSRF_INVALID', '安全校验失败，请刷新页面后重试。')
   }
 
+  async function get<T>(path: string, query?: Record<string, string | number | undefined>): Promise<T> {
+    try {
+      const res = await $fetch<{ data: T }>(path, { query, credentials: 'same-origin' })
+      return res.data
+    }
+    catch (err) {
+      throw toApiError(err)
+    }
+  }
+
   async function getPage<T>(path: string, query: Record<string, string | number | undefined>): Promise<Page<T>> {
     try {
       return await $fetch<Page<T>>(path, { query, credentials: 'same-origin' })
@@ -135,7 +145,10 @@ export function useApi() {
 
   return {
     post: <T>(path: string, body?: object) => send<T>('POST', path, body),
+    put: <T>(path: string, body?: object) => send<T>('PUT', path, body),
+    patch: <T>(path: string, body?: object) => send<T>('PATCH', path, body),
     del: (path: string) => send<undefined>('DELETE', path),
+    get,
     getPage,
     upload,
     resetCsrf: () => { csrf.value = null },

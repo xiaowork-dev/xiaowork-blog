@@ -16,6 +16,9 @@ jobs:
         working-directory: apps/web
       - run: pnpm typecheck
         working-directory: apps/web
+      # Markdown renderer incl. XSS vectors.
+      - run: pnpm test
+        working-directory: apps/web
       - run: pnpm build
         working-directory: apps/web
   api:
@@ -101,7 +104,7 @@ jobs:
           test "$(docker compose --env-file .env exec -T db sh -c 'psql -tA -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT max(version_id) FROM goose_db_version WHERE is_applied"')" = "7"
       # Browser-path auth flow: Nuxt proxy → Go API → PostgreSQL, mail through SMTP into Mailpit.
       - run: node scripts/e2e-auth.mjs http://127.0.0.1:3000 http://127.0.0.1:8025
-      - name: First-admin bootstrap, media e2e and persistence across a rebuild
+      - name: First-admin bootstrap, media + article e2e and persistence across a rebuild
         run: |
           PW="$(openssl rand -hex 16)"  # throwaway, generated per run
           admin() { docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api "$@"; }
@@ -109,10 +112,13 @@ jobs:
           ! printf '%s\n' "$PW" | admin create-admin -email admin2@example.test -nickname CI2
           export E2E_ADMIN_EMAIL=admin@example.test E2E_ADMIN_PASSWORD="$PW"
           node scripts/e2e-media.mjs http://127.0.0.1:3000
+          node scripts/e2e-articles.mjs http://127.0.0.1:3000
           node scripts/e2e-media.mjs http://127.0.0.1:3000 --keep "$RUNNER_TEMP/persist.json"
+          node scripts/e2e-articles.mjs http://127.0.0.1:3000 --keep "$RUNNER_TEMP/article.json"
           docker compose --env-file .env down
           docker compose --env-file .env up -d --force-recreate --wait --wait-timeout 300
           node scripts/e2e-media.mjs http://127.0.0.1:3000 --verify "$RUNNER_TEMP/persist.json"
+          node scripts/e2e-articles.mjs http://127.0.0.1:3000 --verify "$RUNNER_TEMP/article.json"
           admin media-check
       - if: failure()
         run: docker compose --env-file .env logs api web

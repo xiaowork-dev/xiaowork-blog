@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Functional admin frame (UI/UX §7.1). Only the media library exists so far; other sections arrive in P4–P7.
+// Functional admin frame (UI/UX §7.1). Articles, taxonomy and media exist so far; other sections arrive in P5–P7.
 const { user } = useAuth()
 </script>
 
@@ -12,6 +12,8 @@ const { user } = useAuth()
     </header>
     <div class="admin-body">
       <nav class="admin-nav" aria-label="后台导航">
+        <NuxtLink to="/admin/articles">文章管理</NuxtLink>
+        <NuxtLink to="/admin/taxonomy">分类与标签</NuxtLink>
         <NuxtLink to="/admin/media">媒体库</NuxtLink>
         <NuxtLink to="/">返回站点</NuxtLink>
       </nav>

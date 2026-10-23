@@ -1,6 +1,6 @@
 # XiaoWork Blog
 
-> **当前状态：P3 图片与媒体管理已完成（2026-10-23）**：在 P2 账号系统之上，提供本地图片上传（校验、缩略图、权限读取、引用保护删除）、头像上传与后台媒体库页面。文章编辑、前台博客、评论与其余后台功能尚未实现（P4 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
+> **当前状态：P4 Markdown 编辑器与文章发布已完成（2026-10-23）**：在账号（P2）与媒体（P3）之上，提供文章草稿/公开版本隔离、手动发布与更新、撤回与回收站、分类标签管理、Markdown 编辑器和最小公开文章页。完整博客前台、评论与其余后台功能尚未实现（P5 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
@@ -14,8 +14,10 @@ apps/api/cmd/blog-migrate/    迁移命令 up / status / version / down
 apps/api/cmd/blog-admin/      首个管理员初始化（仅运维命令）
 apps/api/internal/auth/       注册、验证、登录、会话、CSRF、限流、找回密码
 apps/api/internal/media/      图片校验、缩略图、本地存储、媒体 API、删除状态机、一致性检查
+apps/api/internal/article/    文章草稿、发布事务、Slug、撤回/回收站、分类标签、公开详情
 scripts/e2e-auth.mjs          认证端到端自检
 scripts/e2e-media.mjs         媒体端到端自检（含容器重建后持久化校验）
+scripts/e2e-articles.mjs      文章端到端自检（草稿隔离、发布、旧 Slug 301、XSS、撤回/回收站）
 compose.yaml                  db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
 .data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
 docs/reference/               需求、架构、数据库、API、UI 规范
@@ -107,7 +109,7 @@ cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?s
 
 ## 验收门槛
 
-参见 `docs/handoffs/` 下各阶段交付记录（P0–P3）。
+参见 `docs/handoffs/` 下各阶段交付记录（P0–P4）。
 
 ## 图片与媒体（P3）
 
@@ -122,3 +124,13 @@ docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin
 
 - 媒体端到端自检需要一个管理员账号：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-media.mjs`（会自行清理上传的测试图片）。
 - 设计细节见 `docs/adr/ADR-0003-P3媒体实现决策.md`。
+
+## 文章与编辑器（P4）
+
+- 后台“文章管理” `/admin/articles`：按状态（草稿 / 有未发布修改 / 已发布 / 已撤回 / 回收站）筛选与搜索；“新建文章”会先在服务器创建空草稿再进入编辑器。
+- 编辑器 `/admin/articles/{id}/edit`：源码 / 分栏 / 预览三种模式，工具栏与快捷键（Ctrl+B 加粗、Ctrl+I 斜体、Ctrl+K 链接、Ctrl+E 行内代码、Ctrl+S 立即保存），粘贴或拖入图片自动上传，可从媒体库插入图片、导入/导出 `.md`；摘要、分类、标签、封面、Slug、SEO、评论开关在“文章设置”中。
+- **所有编辑只保存到草稿**（停顿约 1.5 秒自动保存，浏览器内另有本地备份）；只有点击“发布 / 发布更新”并确认后才替换线上版本。多个窗口同时编辑时会提示版本冲突，本地内容不会丢失。
+- 撤回后文章与旧地址对游客 404；移入回收站不会删除评论和图片；恢复后仍为未公开状态，需要重新发布。
+- 分类与标签在 `/admin/taxonomy` 管理；公开文章地址为 `/posts/{slug}`（P4 为最小页面，完整阅读页在 P5）。
+- 文章端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-articles.mjs`（测试文章最后留在回收站）。
+- Markdown 渲染安全测试：`cd apps/web && pnpm test`。设计取舍见 `docs/adr/ADR-0004-P4文章与编辑器实现决策.md`。

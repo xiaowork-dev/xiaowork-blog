@@ -26,7 +26,7 @@ async function onLogout() {
       <NuxtLink to="/" class="brand">XiaoWork Blog</NuxtLink>
       <nav class="account" aria-label="账号">
         <template v-if="user">
-          <NuxtLink v-if="user.role === 'ADMIN'" to="/admin/media">后台</NuxtLink>
+          <NuxtLink v-if="user.role === 'ADMIN'" to="/admin/articles">后台</NuxtLink>
           <span class="who" :title="user.email">{{ user.nickname }}</span>
           <button type="button" class="link-button" :disabled="loggingOut" @click="onLogout">退出</button>
         </template>

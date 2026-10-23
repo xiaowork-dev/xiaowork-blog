@@ -1,0 +1,127 @@
+/* Article list, taxonomy, editor workspace and rendered Markdown (P4). Uses the tokens from main.css. */
+
+/* ---- Article list & taxonomy (UI/UX §7.3) ---- */
+.admin-page-head.with-action { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--border) }
+.tabs button { padding: 8px 14px; font: inherit; font-size: 14px; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600 }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card) }
+.article-table { width: 100%; border-collapse: collapse; font-size: 14px }
+.article-table th, .article-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top }
+.article-table th { font-weight: 600; color: var(--muted); white-space: nowrap }
+.article-table tr:last-child td { border-bottom: 0 }
+.article-table input { min-height: 34px; padding: 4px 8px; font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px }
+.title-cell { display: grid; gap: 2px; min-width: 200px }
+.title-cell a { font-weight: 600; color: var(--text); text-decoration: none }
+.nowrap { white-space: nowrap }
+.small { font-size: 12px }
+.row-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; white-space: nowrap }
+.row-actions a { text-decoration: none }
+.badge + .badge { margin-left: 4px }
+.badge-success { background: var(--success-bg); color: var(--success) }
+.badge-warning { background: var(--warning-bg); color: var(--warning) }
+.badge-danger { background: var(--error-bg); color: var(--error) }
+.badge-accent { background: var(--accent-soft); color: var(--accent) }
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px }
+.term-section { display: grid; gap: 10px }
+.term-section h2 { margin: 8px 0 0; font-size: 20px }
+.term-section > p { margin: 0 }
+.term-new { display: flex; flex-wrap: wrap; gap: 8px }
+.term-new input { min-height: 38px; padding: 6px 10px; font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px }
+
+/* ---- Editor workspace (UI/UX §7.4) ---- */
+.editor-shell { min-height: 100vh; background: var(--bg) }
+.workspace-page { display: flex; flex-direction: column; height: 100vh }
+.ws-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--card) }
+.ws-back { text-decoration: none; white-space: nowrap }
+.ws-title { flex: 1 1 260px; min-width: 0; min-height: 40px; padding: 6px 10px; font: inherit; font-size: 20px; font-weight: 700; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 8px }
+.ws-title:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus) }
+.ws-save { font-size: 13px; color: var(--muted); white-space: nowrap }
+.save-saving, .save-dirty { color: var(--warning) }
+.save-error, .save-conflict { color: var(--error); font-weight: 600 }
+.ws-modes { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden }
+.ws-modes button { padding: 6px 12px; font: inherit; font-size: 14px; color: var(--text); background: var(--card); border: 0; cursor: pointer }
+.ws-modes button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600 }
+.ws-banner { margin: 8px 16px 0 }
+.ws-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) }
+.ws-body.with-settings { grid-template-columns: minmax(0, 1fr) 340px }
+.ws-panes { min-height: 0; display: grid }
+.ws-panes.mode-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+.ws-source { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border) }
+.md-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--border); background: var(--card) }
+.md-toolbar button { min-width: 32px; min-height: 32px; padding: 0 8px; font: inherit; font-size: 13px; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 6px; cursor: pointer }
+.md-toolbar button:hover:not(:disabled) { background: var(--bg); border-color: var(--border) }
+.md-toolbar-sep { flex: 1 }
+.md-editor { flex: 1; min-height: 0; overflow: auto; background: var(--card) }
+.md-editor .cm-editor { height: 100%; font-size: 15px }
+.md-editor .cm-editor.cm-focused { outline: none }
+.md-editor .cm-scroller { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Microsoft YaHei Mono", monospace; line-height: 1.7 }
+.md-editor .cm-content { color: var(--text); caret-color: var(--accent) }
+.md-editor .cm-gutters { background: var(--card); color: var(--muted); border-right: 1px solid var(--border) }
+.md-editor-loading { padding: 16px; color: var(--muted) }
+.ws-preview { min-height: 0; overflow: auto; padding: 24px 32px; background: var(--card) }
+.preview-title { margin-top: 0 }
+.ws-settings { min-height: 0; overflow: auto; padding: 16px; border-left: 1px solid var(--border); background: var(--card) }
+.ws-settings h2 { margin: 0; font-size: 18px }
+.ws-settings-head { position: sticky; top: -16px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -16px -16px 8px; padding: 12px 16px; background: var(--card); border-bottom: 1px solid var(--border) }
+.ws-settings select, .ws-settings textarea, .ws-settings .field input {
+  width: 100%; min-height: 40px; padding: 8px 10px; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+}
+.ws-settings textarea { resize: vertical }
+.ws-settings .label, .ws-settings legend { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px }
+.tag-field { border: 0; padding: 0; margin: 0 0 16px }
+.tag-chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { padding: 2px 10px; font: inherit; font-size: 13px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; cursor: pointer }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent); font-weight: 600 }
+.tag-new { display: flex; gap: 8px; margin-top: 8px }
+.tag-new input { flex: 1; min-height: 34px; padding: 4px 8px; font: inherit; font-size: 13px; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px }
+.cover-box { display: grid; place-items: center; min-height: 90px; border: 1px dashed var(--border); border-radius: 10px; overflow: hidden; background: var(--bg) }
+.cover-box img { max-width: 100%; max-height: 160px; object-fit: contain }
+.cover-actions, .danger-zone { display: flex; gap: 14px; margin-top: 6px }
+.switch { display: flex; align-items: center; gap: 8px; font-size: 14px }
+.conflict-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0 }
+.conflict-diff h3 { margin: 0 0 4px; font-size: 14px }
+.conflict-diff pre, .discarded { max-height: 220px; overflow: auto; padding: 8px; font-size: 12px; white-space: pre-wrap; word-break: break-word; color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px }
+.publish-summary { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 12px 0; font-size: 14px }
+.publish-summary dt { color: var(--muted) }
+.publish-summary dd { margin: 0; word-break: break-all }
+
+/* ---- Rendered Markdown (editor preview and public page) ---- */
+.md-body { line-height: 1.8; font-size: 16px; color: var(--text); overflow-wrap: anywhere }
+.md-body h1, .md-body h2, .md-body h3 { line-height: 1.35; margin: 1.6em 0 .6em }
+.md-body img { max-width: 100%; height: auto; border-radius: 8px }
+.md-body blockquote { margin: 1em 0; padding: .2em 1em; color: var(--muted); border-left: 4px solid var(--border) }
+.md-body code { padding: .1em .35em; font-size: .9em; background: var(--bg); border-radius: 4px }
+.md-body pre { padding: 14px 16px; overflow-x: auto; border-radius: 10px; background: var(--bg); border: 1px solid var(--border) }
+.md-body pre code { padding: 0; background: none }
+.md-body .shiki, .md-body .shiki span { color: var(--shiki-light); background-color: var(--shiki-light-bg) }
+.md-table { overflow-x: auto; margin: 1em 0 }
+.md-body table { border-collapse: collapse; min-width: 100% }
+.md-body th, .md-body td { padding: 6px 12px; border: 1px solid var(--border) }
+.md-body .task-list-item { list-style: none; margin-left: -1.4em }
+.task-checkbox { margin-right: .4em }
+@media (prefers-color-scheme: dark) {
+  .md-body .shiki, .md-body .shiki span { color: var(--shiki-dark); background-color: var(--shiki-dark-bg) }
+}
+
+/* ---- Minimal public post page (full reading design in P5) ---- */
+.post { max-width: 760px; margin: 0 auto; padding: 32px 0 64px }
+.post-head h1 { font-size: 32px; margin: 0 0 8px; line-height: 1.3 }
+.post-cover { display: block; max-width: 100%; margin: 16px 0; border-radius: 12px }
+.post-foot { margin-top: 40px; display: grid; gap: 16px }
+.post-nav { display: flex; justify-content: space-between; gap: 16px }
+
+@media (max-width: 1023px) {
+  .ws-body.with-settings { grid-template-columns: minmax(0, 1fr) }
+  .ws-settings { position: fixed; inset: 0 0 0 auto; width: min(360px, 100vw); z-index: 20; box-shadow: -8px 0 24px rgba(0, 0, 0, .15) }
+  .ws-panes.mode-split { grid-template-columns: minmax(0, 1fr) }
+  .ws-panes.mode-split .ws-preview { display: none }
+}
+@media (max-width: 767px) {
+  .admin-page-head.with-action { flex-direction: column }
+  .ws-preview { padding: 16px }
+  .conflict-diff { grid-template-columns: 1fr }
+  .post { padding: 20px 0 40px }
+  .post-head h1 { font-size: 24px }
+}
