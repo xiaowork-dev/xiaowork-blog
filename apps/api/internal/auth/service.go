@@ -42,6 +42,12 @@ func NewService(pool *pgxpool.Pool, cfg *config.Config, mailer mail.Mailer, hash
 // Wait blocks until background e-mail deliveries have finished (shutdown and tests).
 func (s *Service) Wait() { s.bg.Wait() }
 
+// RateLimit counts one event for subject under action and returns RATE_LIMITED once more than limit
+// events happen in the fixed window. Other modules (e.g. media uploads) share the persistent limiter.
+func (s *Service) RateLimit(ctx context.Context, action string, limit int, window time.Duration, subject string) error {
+	return s.limiter.hit(ctx, rateRule{Action: action, Limit: limit, Window: window}, subject)
+}
+
 // ---- cookies ----
 
 func (s *Service) sessionCookieName() string {

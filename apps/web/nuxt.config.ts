@@ -9,6 +9,8 @@ export default defineNuxtConfig({
   routeRules: {
     // Auth pages carry one-time tokens and personal state: never cache, never leak the URL via Referer.
     '/auth/**': { headers: { 'cache-control': 'private, no-store', 'referrer-policy': 'no-referrer' } },
+    // Admin pages are personalised and must never be cached or indexed (SAD §2.2).
+    '/admin/**': { headers: { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex, nofollow' } },
   },
   app: {
     head: {

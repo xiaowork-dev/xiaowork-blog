@@ -1,6 +1,6 @@
 # XiaoWork Blog
 
-> **当前状态：P2 用户认证已完成（2026-10-23）**：注册、邮箱验证、登录/退出、找回密码、修改密码/邮箱、管理员初始化，以及统一响应、CSRF、限流等 API 基础设施。文章、评论、媒体与后台尚未实现（P3 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
+> **当前状态：P3 图片与媒体管理已完成（2026-10-23）**：在 P2 账号系统之上，提供本地图片上传（校验、缩略图、权限读取、引用保护删除）、头像上传与后台媒体库页面。文章编辑、前台博客、评论与其余后台功能尚未实现（P4 起）。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
@@ -13,7 +13,9 @@ apps/api/internal/store/      sqlc 生成的类型安全数据访问代码（勿
 apps/api/cmd/blog-migrate/    迁移命令 up / status / version / down
 apps/api/cmd/blog-admin/      首个管理员初始化（仅运维命令）
 apps/api/internal/auth/       注册、验证、登录、会话、CSRF、限流、找回密码
+apps/api/internal/media/      图片校验、缩略图、本地存储、媒体 API、删除状态机、一致性检查
 scripts/e2e-auth.mjs          认证端到端自检
+scripts/e2e-media.mjs         媒体端到端自检（含容器重建后持久化校验）
 compose.yaml                  db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
 .data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
 docs/reference/               需求、架构、数据库、API、UI 规范
@@ -69,7 +71,7 @@ docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin
 ## 持久化
 
 - PostgreSQL：命名卷 `xiaowork-blog_blog_postgres` 挂载到 `/var/lib/postgresql`（PG18 实际 `PGDATA=/var/lib/postgresql/18/docker`）。
-- 媒体：宿主机 `./.data/media` 绑定到 API 容器 `/data/media`。API 以固定 UID/GID `10001:10001` 非 root 运行；**Linux 宿主机**首次启动前执行 `mkdir -p .data/media && sudo chown 10001:10001 .data/media`（Windows/macOS Docker Desktop 无需此步）。
+- 媒体：宿主机 `./.data/media` 绑定到 API 容器 `/data/media`。API 以固定 UID/GID `10001:10001` 非 root 运行；**Linux 宿主机**首次启动前执行 `mkdir -p .data/media && sudo chown 10001:10001 .data/media`（Windows/macOS Docker Desktop 无需此步）。自 P3 起若该目录不可写，API 会在启动时直接失败并在日志中说明。
 - `docker compose down` 与 `up --build --force-recreate` 均不会丢失上述数据；只有 `down -v` 或手动删除目录才会。容器卷**不是备份**，备份/恢复属于 P8。
 
 ## 数据库迁移、sqlc 与数据库测试
@@ -98,11 +100,25 @@ cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?s
 ## 安全与数据
 
 - 未实现的功能不提供伪装业务 API。
-- 图片媒体目录 `.data/media` 保留给 P3，本阶段并无上传接口。
+- 图片只能经 Go 的 `/media/{id}/file` 受控读取（草稿图片游客 404）；`.data/media` 不得配置为反代静态目录，也不得提交 Git。
 - PostgreSQL 18 官方镜像须挂载 `/var/lib/postgresql`，不能沿用旧版常见 `/var/lib/postgresql/data` 方案。
 - 网站始终只允许通过 Nginx Proxy Manager 反代暴露正式流量；P8 才实施正式域名与 HTTPS。
 - `.env`、用户数据、图片、备份与私钥禁止提交 Git。
 
 ## 验收门槛
 
-参见 `docs/handoffs/` 下各阶段交付记录（P0、P1、P2）。
+参见 `docs/handoffs/` 下各阶段交付记录（P0–P3）。
+
+## 图片与媒体（P3）
+
+- 管理员登录后右上角进入“后台”→ **媒体库** `/admin/media`：上传（选择/拖拽/粘贴，失败可重试）、预览、搜索、按用途筛选、复制地址或 Markdown、删除。被文章、头像、站点设置或关于页引用的图片无法删除，会提示引用位置数量。
+- 支持 JPG/PNG/WebP/GIF；默认单张 ≤10 MiB、≤2000 万像素（头像 ≤2 MiB）；扩展名必须与实际格式一致。原图逐字节保存，静态大图另生成缩略图（`?variant=thumb`），GIF 保留动画。
+- 新上传图片默认不公开：只有被已发布文章、站点设置、关于页或正常用户头像引用后，游客才能访问。
+- 一致性检查（只读，适合恢复备份或重建容器后执行）：
+
+```bash
+docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api media-check
+```
+
+- 媒体端到端自检需要一个管理员账号：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-media.mjs`（会自行清理上传的测试图片）。
+- 设计细节见 `docs/adr/ADR-0003-P3媒体实现决策.md`。

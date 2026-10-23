@@ -58,6 +58,10 @@ type Config struct {
 	ResetTokenTTL  time.Duration
 	EmailTokenTTL  time.Duration
 
+	// Upload limits (API-DD §5.7 defaults): article/site/page images and avatars.
+	MediaMaxBytes, MediaMaxPixels   int64
+	AvatarMaxBytes, AvatarMaxPixels int64
+
 	// TrustedProxies are the networks whose X-Forwarded-For entries are believed (Nuxt / Nginx Proxy Manager).
 	TrustedProxies []netip.Prefix
 
@@ -156,6 +160,23 @@ func LoadFrom(getenv func(string) string) (*Config, error) {
 	c.VerifyTokenTTL = duration("VERIFY_EMAIL_TOKEN_TTL", 24*time.Hour, 10*time.Minute, 7*24*time.Hour)
 	c.ResetTokenTTL = duration("RESET_PASSWORD_TOKEN_TTL", 30*time.Minute, 5*time.Minute, 24*time.Hour)
 	c.EmailTokenTTL = duration("CHANGE_EMAIL_TOKEN_TTL", 24*time.Hour, 10*time.Minute, 7*24*time.Hour)
+
+	integer := func(name string, def, min, max int64) int64 {
+		raw := getenv(name)
+		if raw == "" {
+			return def
+		}
+		n, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || n < min || n > max {
+			fail("%s must be an integer between %d and %d", name, min, max)
+			return def
+		}
+		return n
+	}
+	c.MediaMaxBytes = integer("MEDIA_MAX_BYTES", 10<<20, 64<<10, 100<<20)
+	c.MediaMaxPixels = integer("MEDIA_MAX_PIXELS", 20_000_000, 10_000, 100_000_000)
+	c.AvatarMaxBytes = integer("AVATAR_MAX_BYTES", 2<<20, 16<<10, 20<<20)
+	c.AvatarMaxPixels = integer("AVATAR_MAX_PIXELS", 4_194_304, 10_000, 20_000_000)
 
 	for _, part := range strings.Split(getenv("TRUSTED_PROXY_CIDRS"), ",") {
 		part = strings.TrimSpace(part)

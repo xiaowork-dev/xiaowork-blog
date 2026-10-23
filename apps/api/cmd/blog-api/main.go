@@ -15,6 +15,7 @@ import (
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/config"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/httpapi"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/mail"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/media"
 )
 
 func main() {
@@ -46,12 +47,27 @@ func main() {
 	authService := auth.NewService(db, cfg, mail.NewSMTP(cfg.SMTP), auth.NewPasswordHasher(auth.DefaultArgon2, 4), logger)
 	go authService.RunJanitor(ctx, time.Hour)
 
+	storage := media.NewStorage(cfg.MediaRoot)
+	if err := storage.Init(); err != nil {
+		// A missing or read-only volume must stop the service, not fail individual uploads later.
+		logger.Error("media storage unavailable", "root", cfg.MediaRoot, "error", err)
+		os.Exit(1)
+	}
+	mediaService := media.NewService(db, authService, storage, media.Options{
+		Root:         cfg.MediaRoot,
+		Media:        media.Limits{MaxBytes: cfg.MediaMaxBytes, MaxPixels: cfg.MediaMaxPixels},
+		Avatar:       media.Limits{MaxBytes: cfg.AvatarMaxBytes, MaxPixels: cfg.AvatarMaxPixels},
+		MinFreeBytes: 256 << 20,
+	}, logger)
+	go mediaService.RunJanitor(ctx, time.Hour)
+
 	srv := &http.Server{
-		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewRouter(httpapi.Deps{Ping: db.Ping, Auth: authService, Logger: logger}),
+		Addr: cfg.HTTPAddr,
+		Handler: httpapi.NewRouter(httpapi.Deps{
+			Ping: db.Ping, Auth: authService, Media: mediaService, Logger: logger,
+		}),
+		// Body/response deadlines are set per request (httpx.Deadlines) so uploads and downloads can extend them.
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    32 << 10,
 	}

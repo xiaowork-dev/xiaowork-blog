@@ -89,6 +89,8 @@ jobs:
           node-version: '24.22.1'
       - run: cp .env.example .env
       - run: docker compose --env-file .env config --quiet
+      # On Linux the bind-mounted media directory must belong to the API user (uid/gid 10001), see README.
+      - run: mkdir -p .data/media && sudo chown 10001:10001 .data/media
       - run: docker compose --env-file .env up -d --build --wait --wait-timeout 300
       - name: Health and migration checks
         run: |
@@ -99,11 +101,19 @@ jobs:
           test "$(docker compose --env-file .env exec -T db sh -c 'psql -tA -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT max(version_id) FROM goose_db_version WHERE is_applied"')" = "7"
       # Browser-path auth flow: Nuxt proxy → Go API → PostgreSQL, mail through SMTP into Mailpit.
       - run: node scripts/e2e-auth.mjs http://127.0.0.1:3000 http://127.0.0.1:8025
-      - name: First-admin bootstrap is single-use
+      - name: First-admin bootstrap, media e2e and persistence across a rebuild
         run: |
           PW="$(openssl rand -hex 16)"  # throwaway, generated per run
-          printf '%s\n' "$PW" | docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api create-admin -email admin@example.test -nickname CI
-          ! printf '%s\n' "$PW" | docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api create-admin -email admin2@example.test -nickname CI2
+          admin() { docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin/blog-admin api "$@"; }
+          printf '%s\n' "$PW" | admin create-admin -email admin@example.test -nickname CI
+          ! printf '%s\n' "$PW" | admin create-admin -email admin2@example.test -nickname CI2
+          export E2E_ADMIN_EMAIL=admin@example.test E2E_ADMIN_PASSWORD="$PW"
+          node scripts/e2e-media.mjs http://127.0.0.1:3000
+          node scripts/e2e-media.mjs http://127.0.0.1:3000 --keep "$RUNNER_TEMP/persist.json"
+          docker compose --env-file .env down
+          docker compose --env-file .env up -d --force-recreate --wait --wait-timeout 300
+          node scripts/e2e-media.mjs http://127.0.0.1:3000 --verify "$RUNNER_TEMP/persist.json"
+          admin media-check
       - if: failure()
         run: docker compose --env-file .env logs api web
       - if: always()

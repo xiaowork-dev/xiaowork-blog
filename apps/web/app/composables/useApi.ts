@@ -6,13 +6,14 @@ export class ApiError extends Error {
     message: string,
     public fields: Record<string, string[]> = {},
     public retryAfter?: number,
+    public details: Record<string, unknown> = {},
   ) {
     super(message)
   }
 }
 
 interface ErrorBody {
-  error?: { code?: string, message?: string, details?: { fields?: Record<string, string[]> } }
+  error?: { code?: string, message?: string, details?: Record<string, unknown> & { fields?: Record<string, string[]> } }
 }
 
 /** Shape of the error thrown by $fetch (ofetch FetchError). */
@@ -21,22 +22,33 @@ interface FetchFailure {
   data?: unknown
 }
 
+const NETWORK_MESSAGE = '网络连接失败，请检查网络后重试。'
+
+function fromBody(status: number, body: ErrorBody, retryAfterHeader: string | null): ApiError {
+  const retry = Number(retryAfterHeader)
+  return new ApiError(
+    status,
+    body.error?.code ?? 'INTERNAL_ERROR',
+    body.error?.message ?? '服务暂时不可用，请稍后重试。',
+    body.error?.details?.fields ?? {},
+    Number.isFinite(retry) && retry > 0 ? retry : undefined,
+    body.error?.details ?? {},
+  )
+}
+
 function toApiError(err: unknown): ApiError {
   if (err instanceof ApiError) return err
   const failure = (typeof err === 'object' && err !== null ? err : {}) as FetchFailure
   if (failure.response) {
-    const body = (failure.data ?? {}) as ErrorBody
-    const retry = Number(failure.response.headers.get('retry-after'))
-    return new ApiError(
-      failure.response.status,
-      body.error?.code ?? 'INTERNAL_ERROR',
-      body.error?.message ?? '服务暂时不可用，请稍后重试。',
-      body.error?.details?.fields ?? {},
-      Number.isFinite(retry) && retry > 0 ? retry : undefined,
-    )
+    return fromBody(failure.response.status, (failure.data ?? {}) as ErrorBody, failure.response.headers.get('retry-after'))
   }
   // No HTTP response at all: offline, DNS, connection reset (UI/UX §8 "网络断开").
-  return new ApiError(0, 'NETWORK_ERROR', '网络连接失败，请检查网络后重试。')
+  return new ApiError(0, 'NETWORK_ERROR', NETWORK_MESSAGE)
+}
+
+export interface Page<T> {
+  data: T[]
+  meta: { page: number, page_size: number, total?: number, total_pages?: number }
 }
 
 /**
@@ -78,8 +90,54 @@ export function useApi() {
     throw new ApiError(403, 'CSRF_INVALID', '安全校验失败，请刷新页面后重试。')
   }
 
+  async function getPage<T>(path: string, query: Record<string, string | number | undefined>): Promise<Page<T>> {
+    try {
+      return await $fetch<Page<T>>(path, { query, credentials: 'same-origin' })
+    }
+    catch (err) {
+      throw toApiError(err)
+    }
+  }
+
+  /**
+   * multipart upload with progress (fetch cannot report upload progress, so XMLHttpRequest is used).
+   * The form is re-sent once if the CSRF token had to be refreshed.
+   */
+  async function upload<T>(path: string, form: FormData, onProgress?: (fraction: number) => void): Promise<T | undefined> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const token = await csrfToken(attempt > 0)
+      try {
+        return await new Promise<T | undefined>((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+          xhr.open('POST', path)
+          xhr.setRequestHeader('X-CSRF-Token', token)
+          xhr.responseType = 'json'
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total)
+          }
+          xhr.onload = () => {
+            const body = (xhr.response ?? {}) as { data?: T } & ErrorBody
+            if (xhr.status >= 200 && xhr.status < 300) resolve(body.data)
+            else reject(fromBody(xhr.status, body, xhr.getResponseHeader('retry-after')))
+          }
+          xhr.onerror = () => reject(new ApiError(0, 'NETWORK_ERROR', NETWORK_MESSAGE))
+          xhr.send(form)
+        })
+      }
+      catch (err) {
+        const apiErr = toApiError(err)
+        if (apiErr.code === 'CSRF_INVALID' && attempt === 0) continue
+        throw apiErr
+      }
+    }
+    throw new ApiError(403, 'CSRF_INVALID', '安全校验失败，请刷新页面后重试。')
+  }
+
   return {
     post: <T>(path: string, body?: object) => send<T>('POST', path, body),
+    del: (path: string) => send<undefined>('DELETE', path),
+    getPage,
+    upload,
     resetCsrf: () => { csrf.value = null },
   }
 }

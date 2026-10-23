@@ -101,6 +101,19 @@ func SecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
+// Deadlines bounds how long one request may take to send its body and receive the response, replacing
+// server-wide Read/WriteTimeouts so that upload and file handlers can extend their own deadlines.
+func Deadlines(d time.Duration) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rc := http.NewResponseController(w)
+			_ = rc.SetReadDeadline(time.Now().Add(d))
+			_ = rc.SetWriteDeadline(time.Now().Add(d))
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // NotFound and MethodNotAllowed keep unknown routes inside the JSON error contract.
 func NotFound(w http.ResponseWriter, r *http.Request) { WriteError(w, r, ErrNotFound) }
 
