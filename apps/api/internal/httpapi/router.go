@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/article"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/media"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/platform/httpx"
@@ -17,10 +18,11 @@ type PingFunc func(context.Context) error
 
 // Deps are the collaborators of the HTTP API. Auth and Media may be nil (health endpoints only).
 type Deps struct {
-	Ping   PingFunc
-	Auth   *auth.Service
-	Media  *media.Service
-	Logger *slog.Logger
+	Ping     PingFunc
+	Auth     *auth.Service
+	Media    *media.Service
+	Articles *article.Service
+	Logger   *slog.Logger
 }
 
 // NewRouter wires health checks, /media file delivery and the /api/v1 tree (API-DD §2, §3).
@@ -39,7 +41,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.MethodNotAllowed(httpx.MethodNotAllowed)
 
 	r.Get("/health/live", func(w http.ResponseWriter, req *http.Request) {
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P3"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P4"})
 	})
 	r.Get("/health/ready", func(w http.ResponseWriter, req *http.Request) {
 		ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
@@ -48,7 +50,7 @@ func NewRouter(d Deps) *chi.Mux {
 			writeHealth(w, http.StatusServiceUnavailable, map[string]any{"status": "unavailable"})
 			return
 		}
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P3"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P4"})
 	})
 
 	if d.Auth == nil {
@@ -71,6 +73,9 @@ func NewRouter(d Deps) *chi.Mux {
 		api.Group(func(json chi.Router) {
 			json.Use(middleware.Timeout(15 * time.Second))
 			d.Auth.Routes(json)
+			if d.Articles != nil {
+				d.Articles.PublicRoutes(json)
+			}
 		})
 		// Every /admin path is guarded before routing, so non-admins get 401/403 and never learn which
 		// admin endpoints exist. Further admin features arrive in P4–P7.
@@ -78,6 +83,12 @@ func NewRouter(d Deps) *chi.Mux {
 			admin.Use(d.Auth.RequireAdmin)
 			if d.Media != nil {
 				d.Media.AdminRoutes(admin)
+			}
+			if d.Articles != nil {
+				admin.Group(func(json chi.Router) {
+					json.Use(middleware.Timeout(15 * time.Second))
+					d.Articles.AdminRoutes(json)
+				})
 			}
 			admin.HandleFunc("/*", httpx.NotFound)
 		})

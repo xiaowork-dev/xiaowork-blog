@@ -127,10 +127,15 @@ const MaxJSONBody = 64 << 10
 // DecodeJSON strictly decodes a single JSON object: correct Content-Type, size limit, no unknown fields
 // (so e.g. a "role" field in a public registration is rejected rather than silently ignored).
 func DecodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	return DecodeJSONLimit(w, r, dst, MaxJSONBody)
+}
+
+// DecodeJSONLimit is DecodeJSON with a custom size limit (e.g. Markdown drafts, API-DD §5.2).
+func DecodeJSONLimit(w http.ResponseWriter, r *http.Request, dst any, limit int64) error {
 	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
 		return ErrUnsupportedType
 	}
-	dec := jsonDecoder(http.MaxBytesReader(w, r.Body, MaxJSONBody))
+	dec := jsonDecoder(http.MaxBytesReader(w, r.Body, limit))
 	if err := dec.Decode(dst); err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {

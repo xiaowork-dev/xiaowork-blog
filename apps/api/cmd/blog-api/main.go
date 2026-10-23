@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/article"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/config"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/httpapi"
@@ -60,11 +61,12 @@ func main() {
 		MinFreeBytes: 256 << 20,
 	}, logger)
 	go mediaService.RunJanitor(ctx, time.Hour)
+	articleService := article.NewService(db, cfg.PublicBaseURL.Host, logger)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			Ping: db.Ping, Auth: authService, Media: mediaService, Logger: logger,
+			Ping: db.Ping, Auth: authService, Media: mediaService, Articles: articleService, Logger: logger,
 		}),
 		// Body/response deadlines are set per request (httpx.Deadlines) so uploads and downloads can extend them.
 		ReadHeaderTimeout: 5 * time.Second,
