@@ -1,0 +1,92 @@
+/* P7 admin console: dashboard, users, site settings, about page and shared admin polish (UI/UX §7). */
+
+.brand { display: inline-flex; align-items: center; gap: 8px }
+.brand-logo { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; flex: none }
+.brand > span { min-width: 0; overflow: hidden; text-overflow: ellipsis }
+.is-disabled td, li.is-disabled > :not(.link-tools):not(.switch) { opacity: .6 }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px }
+.section-head h2 { margin: 0 0 12px }
+
+/* ---- dashboard ---- */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none }
+.stat-card { display: grid; gap: 4px; height: 100%; padding: 16px 18px; color: var(--text); text-decoration: none; background: var(--card); border: 1px solid var(--border); border-radius: 14px }
+.stat-card:hover { border-color: var(--accent) }
+.stat-label { color: var(--muted); font-size: 14px }
+.stat-value { font-size: 30px; font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums }
+.stat-hint { color: var(--muted); font-size: 13px }
+.notice-list { display: grid; gap: 8px }
+.notice-list .alert { margin: 0 }
+.overview-columns { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start }
+.overview-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none }
+.overview-list li { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--border) }
+.overview-list li:last-child { border-bottom: 0 }
+.overview-title { font-weight: 600; color: var(--text); text-decoration: none; overflow-wrap: anywhere }
+a.overview-title:hover { color: var(--accent) }
+.overview-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--muted); font-size: 13px }
+.overview-meta .badge { margin: 0 }
+
+/* ---- users ---- */
+.media-toolbar select { flex: 0 0 auto }
+.user-cell { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text); text-decoration: none }
+.user-cell:hover { color: var(--accent) }
+.user-cell img, .user-initial { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none }
+.user-initial { display: grid; place-items: center; font-size: 13px; color: var(--accent); background: var(--accent-soft) }
+.user-head { display: flex; flex-wrap: wrap; align-items: center; gap: 18px }
+.user-head .account-avatar { width: 72px; height: 72px }
+.user-head-main { flex: 1 1 240px; min-width: 0 }
+.user-head-main h1 { margin: 0; font-size: 24px; overflow-wrap: anywhere }
+.user-head-main p { margin: 4px 0 0; overflow-wrap: anywhere }
+.user-badges { display: flex; flex-wrap: wrap; gap: 6px }
+.user-badges .badge { margin: 0 }
+.user-actions { display: grid; gap: 6px; justify-items: end }
+.user-actions .muted { margin: 0 }
+
+/* ---- site settings ---- */
+.settings-page { max-width: 920px }
+.settings-form { display: grid; gap: 20px }
+.settings-page .account-card textarea { font-size: 15px }
+.image-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 4px }
+.image-slot { display: grid; gap: 8px; align-content: start }
+.image-slot-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 16px }
+.slot-preview { width: 72px; height: 72px; object-fit: contain; padding: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px }
+.slot-empty { display: grid; place-items: center; width: 72px; height: 72px; font-size: 12px; color: var(--muted); border: 1px dashed var(--border); border-radius: 10px }
+.slot-actions { display: flex; gap: 14px }
+.sticky-save { position: sticky; bottom: 0; z-index: 5; display: grid; gap: 8px; justify-items: start; padding: 12px 0; background: linear-gradient(transparent, var(--bg) 30%) }
+.sticky-save .alert { margin: 0 }
+.link-editor { display: grid; gap: 10px; margin: 0 0 12px; padding: 0; list-style: none }
+.link-editor li { display: grid; grid-template-columns: 110px minmax(100px, 1fr) minmax(160px, 2fr) auto auto; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--card) }
+.link-editor select, .link-editor input:not([type="checkbox"]) {
+  min-width: 0; min-height: 38px; padding: 6px 10px; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+}
+.link-editor input[aria-invalid="true"] { border-color: var(--error) }
+.link-tools { display: inline-flex; gap: 2px }
+.link-tools .icon-button { width: 34px; height: 34px }
+.link-tools .icon-button:disabled { opacity: .35; cursor: default }
+.link-error { grid-column: 1 / -1; margin: 0 }
+.link-editor-actions { display: flex; gap: 10px }
+.icon-button.danger:hover { color: var(--error); background: var(--error-bg) }
+
+/* ---- about page ---- */
+.about-admin .alert { margin: 0 }
+.about-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px }
+.about-panes { display: grid; gap: 16px; min-height: 480px }
+.about-panes.mode-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+.about-source, .about-preview { min-width: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--card); overflow: hidden }
+.about-source { display: flex; flex-direction: column; min-height: 480px }
+.about-source .md-editor { flex: 1; min-height: 480px }
+.about-preview { padding: 20px 24px; max-height: 70vh; overflow: auto }
+.term-desc-input { margin-top: 6px; width: 100% }
+
+@media (max-width: 1023px) {
+  .overview-columns { grid-template-columns: minmax(0, 1fr) }
+  .about-panes.mode-split { grid-template-columns: minmax(0, 1fr) }
+}
+@media (max-width: 767px) {
+  .link-editor li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+  .link-editor .link-url { grid-column: 1 / -1 }
+  .user-actions { justify-items: start }
+  .stat-value { font-size: 26px }
+  .about-preview { padding: 16px }
+}
+.term-section > *, .settings-form > * { min-width: 0 }

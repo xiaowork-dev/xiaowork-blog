@@ -129,7 +129,8 @@ const listPath = `/api/v1/articles/${art.id}/comments`
 let r = await anon.http('GET', listPath)
 log(r.status === 200 && r.data.data.length === 0 && r.data.meta.comments_enabled === true, 'guest reads the (empty) comment list')
 r = await anon.http('GET', `/posts/${art.slug}`)
-log(r.status === 200 && r.text.includes('id="comments"') && !r.text.includes('@example.test'), 'SSR article page has the comment section and no account data')
+// Account e-mails of the test readers must never appear (a public contact address in the site settings may).
+log(r.status === 200 && r.text.includes('id="comments"') && ![alice, bob, dave].some(u => r.text.includes(u.email)), 'SSR article page has the comment section and no account data')
 log((await anon.http('POST', listPath, { json: { body_text: '游客' } })).code === 'AUTH_REQUIRED', 'guest cannot comment (401)')
 const carol = browser()
 await carol.token()

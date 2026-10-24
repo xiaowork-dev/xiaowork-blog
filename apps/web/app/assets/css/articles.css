@@ -5,7 +5,7 @@
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--border) }
 .tabs button { padding: 8px 14px; font: inherit; font-size: 14px; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer }
 .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600 }
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card) }
+.table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card) }
 .article-table { width: 100%; border-collapse: collapse; font-size: 14px }
 .article-table th, .article-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top }
 .article-table th { font-weight: 600; color: var(--muted); white-space: nowrap }

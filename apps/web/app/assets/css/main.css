@@ -93,12 +93,18 @@ a { color: var(--accent) }
 .admin-top { height: 60px; display: flex; align-items: center; gap: 14px; padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--card) }
 .flag { font-size: 12px; border: 1px solid var(--accent-border); color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px }
 .admin-who { margin-left: auto }
-.admin-body { display: grid; grid-template-columns: 200px minmax(0, 1fr) }
-.admin-nav { display: flex; flex-direction: column; gap: 4px; padding: 20px 12px; border-right: 1px solid var(--border); min-height: calc(100vh - 60px) }
+.admin-back { white-space: nowrap; text-decoration: none; font-size: 14px }
+.admin-top .admin-menu-button { display: none }
+.admin-body { display: grid; grid-template-columns: 220px minmax(0, 1fr) }
+.admin-nav { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; gap: 4px; padding: 20px 12px; border-right: 1px solid var(--border); min-height: calc(100vh - 60px) }
 .admin-nav a { padding: 10px 12px; border-radius: 8px; color: var(--text); text-decoration: none }
-.admin-nav a.router-link-active { background: var(--accent-soft); color: var(--accent); font-weight: 600 }
+.admin-nav a:hover { background: var(--bg) }
+.admin-nav a.is-active { background: var(--accent-soft); color: var(--accent); font-weight: 600 }
 .admin-main { padding: 28px 32px; min-width: 0 }
+.admin-main:focus { outline: none; box-shadow: none }
 .admin-page { display: grid; gap: 20px; max-width: 1200px }
+/* Grid items default to min-width: auto, which would let wide tables push the page sideways. */
+.admin-page > * { min-width: 0 }
 .admin-page-head h1 { margin: 0 0 4px; font-size: 26px }
 .admin-page-head p { margin: 0 }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
@@ -135,7 +141,7 @@ a { color: var(--accent) }
 .media-meta { display: grid; gap: 2px; padding: 10px 12px 4px; font-size: 13px }
 .media-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .media-actions { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 4px 12px 12px; font-size: 13px }
-.badge { justify-self: start; margin-top: 4px; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent) }
+.badge { justify-self: start; margin-top: 4px; white-space: nowrap; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent) }
 .badge-muted { background: var(--bg); color: var(--muted); border: 1px solid var(--border) }
 .danger { color: var(--error) }
 .button-danger { background: var(--error); border-color: var(--error); color: #fff }
@@ -160,8 +166,13 @@ a { color: var(--accent) }
 
 @media (max-width: 767px) {
   .admin-top { padding: 0 16px }
-  .admin-body { grid-template-columns: 1fr }
-  .admin-nav { flex-direction: row; min-height: 0; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px 12px; overflow-x: auto }
+  .admin-body { grid-template-columns: minmax(0, 1fr) }
+  .admin-top { gap: 8px }
+  .admin-top .flag, .admin-who { display: none }
+  .admin-back { margin-left: auto }
+  .admin-top .admin-menu-button { display: inline-grid }
+  .admin-nav { display: none; position: static; min-height: 0; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px 12px; background: var(--card) }
+  .admin-nav.open { display: flex }
   .admin-main { padding: 20px 16px }
   .media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
   .media-dialog { padding: 16px }

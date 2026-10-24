@@ -502,7 +502,7 @@ func escapeLike(s string) string {
 	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
-// GET /admin/media?page=&page_size=&q=&usage_kind=
+// GET /admin/media?page=&page_size=&q=&usage_kind= (one kind or a comma-separated list)
 func (s *Service) list(w http.ResponseWriter, r *http.Request) error {
 	qs := r.URL.Query()
 	page, size := 1, 20
@@ -525,8 +525,12 @@ func (s *Service) list(w http.ResponseWriter, r *http.Request) error {
 		return httpx.FieldErrors(map[string][]string{"q": {"TOO_LONG"}})
 	}
 	kind := strings.ToUpper(qs.Get("usage_kind"))
-	if kind != "" && kind != "ARTICLE" && kind != "SITE" && kind != "PAGE" && kind != "AVATAR" {
-		return httpx.FieldErrors(map[string][]string{"usage_kind": {"INVALID"}})
+	if kind != "" {
+		for _, k := range strings.Split(kind, ",") {
+			if k != "ARTICLE" && k != "SITE" && k != "PAGE" && k != "AVATAR" {
+				return httpx.FieldErrors(map[string][]string{"usage_kind": {"INVALID"}})
+			}
+		}
 	}
 	rows, err := s.q.ListMediaLibrary(r.Context(), store.ListMediaLibraryParams{
 		Pattern: "%" + escapeLike(q) + "%", UsageKind: kind, PageLimit: int32(size), PageOffset: int32((page - 1) * size),

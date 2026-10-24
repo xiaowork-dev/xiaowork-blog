@@ -1,6 +1,6 @@
 # XiaoWork Blog
 
-> **当前状态：P6 评论系统与用户中心已完成（2026-10-24）**：在 P5 博客前台之上，提供文章评论与楼中楼回复（登录且邮箱已验证即可发表，立即公开，无审核队列）、用户中心（资料与头像、修改密码、更换邮箱、退出设备、我的评论）以及后台评论治理（隐藏/恢复/删除）。后台完善（P7）与生产部署（P8）尚未实现。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
+> **当前状态：P7 管理后台已完成（2026-10-24）**：V1.0 的业务功能已全部完成——公开博客、Markdown 编辑与发布、评论与用户中心，以及完整后台（控制台、文章、分类标签、评论、用户、媒体库、网站设置、关于页）。生产部署与上线（P8）尚未进行。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
@@ -15,13 +15,15 @@ apps/api/cmd/blog-admin/      首个管理员初始化（仅运维命令）
 apps/api/internal/auth/       注册、验证、登录、会话、CSRF、限流、找回密码
 apps/api/internal/media/      图片校验、缩略图、本地存储、媒体 API、删除状态机、一致性检查
 apps/api/internal/article/    文章草稿、发布事务、Slug、撤回/回收站、分类标签、公开列表/搜索/归档/浏览量
-apps/api/internal/site/       公开站点资料（/site）与关于页（/pages/about）
+apps/api/internal/site/       站点资料与关于页：公开读取 + 后台设置、外链、导航、关于页编辑
 apps/api/internal/comment/    评论读取/发表/回复/删除、我的评论、后台评论治理
+apps/api/internal/admin/      后台控制台统计、用户管理（禁用/恢复并撤销会话）
 scripts/e2e-auth.mjs          认证端到端自检
 scripts/e2e-media.mjs         媒体端到端自检（含容器重建后持久化校验）
 scripts/e2e-articles.mjs      文章端到端自检（草稿隔离、发布、旧 Slug 301、XSS、撤回/回收站）
 scripts/e2e-public.mjs        前台端到端自检（分页、分类标签归档、中文搜索、SEO、sitemap/RSS、浏览量）
 scripts/e2e-comments.mjs      评论、用户中心与评论治理端到端自检（真实注册并通过 Mailpit 验证）
+scripts/e2e-admin.mjs         后台端到端自检（控制台、禁用用户、站点设置/外链/导航/关于页前台生效、XSS、引用保护）
 compose.yaml                  db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
 .data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
 docs/reference/               需求、架构、数据库、API、UI 规范
@@ -113,7 +115,7 @@ cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?s
 
 ## 验收门槛
 
-参见 `docs/handoffs/` 下各阶段交付记录（P0–P6）。
+参见 `docs/handoffs/` 下各阶段交付记录（P0–P7）。
 
 ## 图片与媒体（P3）
 
@@ -156,3 +158,12 @@ docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin
 - 用户中心：`/account/profile`（昵称、简介、头像、邮箱状态）、`/account/security`（修改密码后需重新登录、更换邮箱需在已登录状态下打开确认邮件、退出当前或所有设备）、`/account/comments`（我的评论）。
 - 后台 `/admin/comments`：按文章、用户、状态、日期和关键词筛选，可以隐藏、恢复或删除（删除不可恢复）；所有操作都写入审计日志。
 - 评论端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-comments.mjs http://127.0.0.1:3000 http://127.0.0.1:8025`（需要 Mailpit）。设计取舍见 `docs/adr/ADR-0006-P6评论与用户中心实现决策.md`。
+
+## 管理后台（P7）
+
+- 入口 `/admin`（仅管理员）。左侧导航依次为：控制台、文章管理、分类与标签、评论管理、用户管理、媒体库、网站设置、关于页；手机上通过顶栏的菜单按钮展开。
+- **控制台**：文章、用户、评论、媒体的实时数量，最近更新的文章和管理动态；没有图表，也没有“待审核”。
+- **用户管理**：搜索、筛选、查看详情和最近评论，可以禁用或恢复**普通用户**。禁用会立即让该用户在所有设备上退出，之后无法登录、评论或找回密码；管理员账号与自己的账号不能被禁用。新管理员只能在服务器上用 `blog-admin create-admin` 创建。
+- **网站设置**：可修改站名、描述、Logo、Favicon、个人栏头像、昵称和简介、个人栏外链（仅限 https 与 mailto，可排序、启停）、顶部导航（为空时使用默认导航）和默认 SEO；图片从媒体库选择。保存后前台立即生效。SMTP、数据库等部署密钥只放在环境变量中，后台不显示也不能修改。
+- **关于页**：Markdown 编辑加实时预览。**保存即公开**，没有草稿。
+- 后台端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-admin.mjs http://127.0.0.1:3000 http://127.0.0.1:8025`（会恢复原有的站点设置）。设计取舍见 `docs/adr/ADR-0007-P7管理后台实现决策.md`。

@@ -13,7 +13,7 @@ func TestLiveness(t *testing.T) {
 	handler := NewRouter(Deps{Ping: func(context.Context) error { return nil }})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health/live", nil))
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"stage":"P6"`) {
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"stage":"P7"`) {
 		t.Fatalf("unexpected response: %d %s", rec.Code, rec.Body.String())
 	}
 }

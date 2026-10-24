@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/admin"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/article"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/comment"
@@ -26,6 +27,7 @@ type Deps struct {
 	Articles *article.Service
 	Site     *site.Service
 	Comments *comment.Service
+	Admin    *admin.Service
 	Logger   *slog.Logger
 }
 
@@ -45,7 +47,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.MethodNotAllowed(httpx.MethodNotAllowed)
 
 	r.Get("/health/live", func(w http.ResponseWriter, req *http.Request) {
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P6"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P7"})
 	})
 	r.Get("/health/ready", func(w http.ResponseWriter, req *http.Request) {
 		ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
@@ -54,7 +56,7 @@ func NewRouter(d Deps) *chi.Mux {
 			writeHealth(w, http.StatusServiceUnavailable, map[string]any{"status": "unavailable"})
 			return
 		}
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P6"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P7"})
 	})
 
 	if d.Auth == nil {
@@ -104,6 +106,18 @@ func NewRouter(d Deps) *chi.Mux {
 				admin.Group(func(json chi.Router) {
 					json.Use(middleware.Timeout(15 * time.Second))
 					d.Comments.AdminRoutes(json)
+				})
+			}
+			if d.Site != nil {
+				admin.Group(func(json chi.Router) {
+					json.Use(middleware.Timeout(15 * time.Second))
+					d.Site.AdminRoutes(json)
+				})
+			}
+			if d.Admin != nil {
+				admin.Group(func(json chi.Router) {
+					json.Use(middleware.Timeout(15 * time.Second))
+					d.Admin.AdminRoutes(json)
 				})
 			}
 			admin.HandleFunc("/*", httpx.NotFound)

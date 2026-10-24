@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Media library list (UI/UX §7.7). mode="manage": preview, copy URL / Markdown, delete with reference
-// protection. mode="select": click a card to choose it (used by MediaPicker for the P4 editor).
+// protection. mode="select": click a card to choose it (MediaPicker: article editor, site settings, about page).
 import { ApiError, describeError, useApi } from '~/composables/useApi'
 import { copyText, describeReferences, formatBytes, formatDate, type MediaItem } from '~/utils/media'
 
@@ -14,6 +14,7 @@ const totalPages = ref(1)
 const total = ref(0)
 const query = ref('')
 const kind = ref(props.usageKind)
+const kindId = useId()
 const loading = ref(false)
 const error = ref('')
 const notice = ref('')
@@ -106,13 +107,15 @@ defineExpose({ reload: () => load(true), prepend })
     <div class="media-toolbar">
       <label class="visually-hidden" for="media-search">按文件名搜索</label>
       <input id="media-search" v-model="query" type="search" placeholder="按文件名搜索" maxlength="100">
-      <label class="visually-hidden" for="media-kind">用途</label>
-      <select v-if="mode === 'manage'" id="media-kind" v-model="kind">
-        <option value="">全部用途</option>
+      <label class="visually-hidden" :for="kindId">用途</label>
+      <!-- In select mode avatars are not offered: they are personal images and cannot be reused. -->
+      <select :id="kindId" v-model="kind">
+        <option v-if="mode === 'manage'" value="">全部用途</option>
+        <option v-else value="ARTICLE,SITE,PAGE">全部可用图片</option>
         <option value="ARTICLE">文章图片</option>
         <option value="SITE">站点图片</option>
         <option value="PAGE">关于页</option>
-        <option value="AVATAR">用户头像</option>
+        <option v-if="mode === 'manage'" value="AVATAR">用户头像</option>
       </select>
       <span class="muted">共 {{ total }} 张</span>
     </div>

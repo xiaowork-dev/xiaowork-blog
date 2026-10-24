@@ -50,13 +50,17 @@ watch(query, () => {
 watch([status, page], () => void load())
 onMounted(load)
 
+const confirmer = ref<{ ask: (q: { title: string, message?: string, confirmLabel?: string, danger?: boolean }) => Promise<boolean> } | null>(null)
+
 async function act(item: ArticleListItem, action: 'withdraw' | 'trash' | 'restore') {
+  const name = item.title || '无标题'
   const questions = {
-    withdraw: `撤回《${item.title || '无标题'}》？游客将无法访问，评论与图片保留。`,
-    trash: `将《${item.title || '无标题'}》移至回收站？文章不再公开；删除不会清理图片和评论，可随时恢复。`,
-    restore: '',
+    withdraw: { title: `撤回《${name}》？`, message: '游客将无法访问这篇文章，评论与图片保留，之后可以重新发布。', confirmLabel: '撤回', danger: true },
+    trash: { title: `将《${name}》移至回收站？`, message: '文章不再公开；移入回收站不会清理图片和评论，可随时恢复。', confirmLabel: '移至回收站', danger: true },
+    restore: null,
   }
-  if (questions[action] && !window.confirm(questions[action])) return
+  const q = questions[action]
+  if (q && !(await confirmer.value?.ask(q))) return
   try {
     if (action === 'trash') await api.del(`/api/v1/admin/articles/${item.id}`)
     else await api.post(`/api/v1/admin/articles/${item.id}/${action}`)
@@ -129,5 +133,6 @@ async function act(item: ArticleListItem, action: 'withdraw' | 'trash' | 'restor
       <span>{{ page }} / {{ totalPages }}</span>
       <button type="button" class="button button-secondary button-small" :disabled="page >= totalPages" @click="page++">下一页</button>
     </nav>
+    <ConfirmDialog ref="confirmer" />
   </div>
 </template>

@@ -45,7 +45,7 @@ usePageSeo(() => ({
   <section class="about-page" aria-labelledby="page-heading">
     <h1 id="page-heading" class="section-title">{{ data?.title || '关于' }}</h1>
     <StateBlock v-if="error" kind="error" title="关于页加载失败" :retrying="status === 'pending'" @retry="refresh()" />
-    <div v-else-if="data" ref="body" class="md-body about-body" v-html="html" />
+    <div v-else-if="data && data.body_markdown.trim()" ref="body" class="md-body about-body" v-html="html" />
     <div v-else class="about-empty">
       <p>{{ site.profile.bio || '这里还没有介绍内容。' }}</p>
     </div>

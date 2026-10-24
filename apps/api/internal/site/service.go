@@ -1,5 +1,5 @@
 // Package site serves the public site profile and the about page (API-DD §4.1 /site, /pages/about).
-// Editing them is the P7 admin "站点设置"; until then the deployment defaults of migration 00006 apply.
+// They are edited in the P7 admin (admin.go); migration 00006 provides the deployment defaults.
 package site
 
 import (
@@ -16,10 +16,14 @@ import (
 )
 
 type Service struct {
-	q *store.Queries
+	pool     *pgxpool.Pool
+	q        *store.Queries
+	siteHost string // host of PUBLIC_BASE_URL; absolute /media URLs on it count as about-page references
 }
 
-func NewService(pool *pgxpool.Pool) *Service { return &Service{q: store.New(pool)} }
+func NewService(pool *pgxpool.Pool, siteHost string) *Service {
+	return &Service{pool: pool, q: store.New(pool), siteHost: siteHost}
+}
 
 // PublicRoutes mounts the permission-P endpoints.
 func (s *Service) PublicRoutes(r chi.Router) {

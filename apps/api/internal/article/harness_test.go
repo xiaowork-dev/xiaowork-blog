@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/admin"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/article"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/comment"
@@ -60,7 +61,7 @@ func newHarness(t *testing.T) *harness {
 	}, logger)
 	articles := article.NewService(h.pool, "127.0.0.1:3000", authSvc, logger)
 	h.srv = httptest.NewServer(httpapi.NewRouter(httpapi.Deps{
-		Ping: h.pool.Ping, Auth: authSvc, Media: mediaSvc, Articles: articles, Site: site.NewService(h.pool),
+		Ping: h.pool.Ping, Auth: authSvc, Media: mediaSvc, Articles: articles, Site: site.NewService(h.pool, "127.0.0.1:3000"), Admin: admin.NewService(h.pool, logger),
 		Comments: comment.NewService(h.pool, authSvc, logger), Logger: logger,
 	}))
 	t.Cleanup(h.srv.Close)

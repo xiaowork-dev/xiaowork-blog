@@ -755,3 +755,9 @@ func (s *Service) restore(w http.ResponseWriter, r *http.Request) error {
 		return st, true, err
 	}, "ARTICLE_RESTORE", http.StatusOK)
 }
+
+// CheckMedia is checkMedia for other modules (site settings, about page): same READY / not-avatar rule and
+// the same FOR SHARE lock against concurrent deletion.
+func CheckMedia(ctx context.Context, q *store.Queries, ids []uuid.UUID) error {
+	return checkMedia(ctx, q, ids)
+}

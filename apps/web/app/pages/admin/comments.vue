@@ -184,6 +184,7 @@ function badge(s: AdminComment['status']) {
                 <button type="button" class="link-button" :title="`只看 ${c.author.nickname} 的评论`" @click="apply({ author_id: c.author.id })">{{ c.author.nickname }}</button>
                 <span v-if="c.author.role === 'ADMIN'" class="owner-badge">博主</span>
                 <span class="muted small block">{{ c.author.email }}</span>
+                <NuxtLink :to="`/admin/users/${c.author.id}`" class="small block">用户详情 →</NuxtLink>
                 <span v-if="c.author.status !== 'ACTIVE'" class="badge badge-danger">已禁用</span>
               </td>
               <td>

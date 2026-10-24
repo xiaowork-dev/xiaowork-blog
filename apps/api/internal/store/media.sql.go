@@ -65,7 +65,8 @@ FROM media_assets m
 JOIN users u ON u.id = m.uploaded_by
 WHERE m.state = 'READY'
   AND m.original_filename ILIKE $1
-  AND ($2::text = '' OR m.usage_kind = $2::text)
+  -- usage_kind is one kind or a comma-separated list (the picker asks for "ARTICLE,SITE,PAGE": no avatars).
+  AND ($2::text = '' OR m.usage_kind = ANY(string_to_array($2::text, ',')))
 ORDER BY m.created_at DESC, m.id DESC
 LIMIT $4 OFFSET $3
 `

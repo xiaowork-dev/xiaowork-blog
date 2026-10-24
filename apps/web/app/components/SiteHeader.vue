@@ -80,7 +80,10 @@ async function onLogout() {
 <template>
   <header class="site-header">
     <div class="site-header-inner">
-      <NuxtLink to="/" class="brand">{{ site.site_title }}</NuxtLink>
+      <NuxtLink to="/" class="brand">
+        <img v-if="site.logo" :src="site.logo.url" alt="" class="brand-logo" width="28" height="28">
+        <span>{{ site.site_title }}</span>
+      </NuxtLink>
       <nav class="main-nav" aria-label="主导航">
         <template v-for="l in links" :key="l.id">
           <NuxtLink
@@ -100,7 +103,7 @@ async function onLogout() {
         </button>
         <div class="account-links">
           <template v-if="user">
-            <NuxtLink v-if="user.role === 'ADMIN'" to="/admin/articles">后台</NuxtLink>
+            <NuxtLink v-if="user.role === 'ADMIN'" to="/admin">后台</NuxtLink>
             <NuxtLink to="/account/profile" class="who" :title="`个人中心：${user.nickname}`">{{ user.nickname }}</NuxtLink>
             <button type="button" class="link-button" :disabled="loggingOut" @click="onLogout">退出</button>
           </template>
@@ -139,7 +142,7 @@ async function onLogout() {
             <span class="muted">已登录：{{ user.nickname }}</span>
             <NuxtLink to="/account/profile">个人中心</NuxtLink>
             <NuxtLink to="/account/comments">我的评论</NuxtLink>
-            <NuxtLink v-if="user.role === 'ADMIN'" to="/admin/articles">后台管理</NuxtLink>
+            <NuxtLink v-if="user.role === 'ADMIN'" to="/admin">后台管理</NuxtLink>
             <button type="button" class="link-button" :disabled="loggingOut" @click="onLogout">退出登录</button>
           </template>
           <template v-else>

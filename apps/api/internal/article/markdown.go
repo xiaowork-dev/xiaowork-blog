@@ -142,3 +142,9 @@ func slugify(title string) string {
 	}
 	return s
 }
+
+// MediaRefs and PlainText are shared with the about page (internal/site), which follows the same
+// reference and plain-text rules as articles.
+func MediaRefs(source, siteHost string) []uuid.UUID { return mediaRefs(source, siteHost) }
+
+func PlainText(source string) string { return plainText(source) }
