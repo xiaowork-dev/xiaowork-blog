@@ -150,6 +150,12 @@ jobs:
           docker run -d --name npm-sim --network npm_proxy -p 127.0.0.1:8443:443 \
             -v "$PWD/deploy/nginx/npm-equivalent.conf:/etc/nginx/conf.d/default.conf:ro" -v "$RUNNER_TEMP/certs:/etc/nginx/certs:ro" nginx:1.30.5-alpine
           docker run -d --name mail-sim --network npm_proxy -p 127.0.0.1:8025:8025 axllent/mailpit:v1.32.0
+      - name: read-only precheck
+        run: |
+          sudo bash deploy/precheck.sh --npm-network npm_proxy --domain localhost --smtp 127.0.0.1:8025 | tee "$RUNNER_TEMP/precheck.txt"
+          grep -q '预检结束' "$RUNNER_TEMP/precheck.txt"
+          ! grep -qiE 'password|secret' "$RUNNER_TEMP/precheck.txt"
+          test -z "$(docker ps -a --format '{{.Names}}' | grep '^xiaowork-blog')"
       - name: install.sh (generate .env, install, idempotent re-run)
         run: |
           sudo deploy/install.sh

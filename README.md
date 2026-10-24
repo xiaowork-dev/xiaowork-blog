@@ -25,7 +25,7 @@ scripts/e2e-public.mjs        前台端到端自检（分页、分类标签归�
 scripts/e2e-comments.mjs      评论、用户中心与评论治理端到端自检（真实注册并通过 Mailpit 验证）
 scripts/e2e-admin.mjs         后台端到端自检（控制台、禁用用户、站点设置/外链/导航/关于页前台生效、XSS、引用保护）
 compose.yaml                  本地开发：db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
-deploy/                       生产部署：compose.prod.yaml、env.production.example、install/update/rollback/backup/restore/admin 脚本
+deploy/                       生产部署：compose.prod.yaml、env.production.example、install/update/rollback/backup/restore/admin 脚本、只读预检 precheck.sh
 deploy/nginx/                 与 Nginx Proxy Manager 等价的 nginx 反代配置（参考与演练用）
 deploy/test/                  隔离的部署演练环境（Docker-in-Docker）
 docs/deploy/                  部署与运维手册、上线检查清单、性能基线与剩余风险

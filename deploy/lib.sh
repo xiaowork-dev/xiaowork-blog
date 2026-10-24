@@ -99,8 +99,17 @@ detect_trusted_proxies() {
 }
 
 check_proxy_network() {
+  # Docker's predefined networks have no service-name DNS (bridge) or no isolation (host/none), so NPM could
+  # not reach xiaowork-blog-web / xiaowork-blog-api by name.
+  case "$PROXY_NETWORK" in
+    bridge|host|none) die "PROXY_NETWORK 不能是 Docker 预置网络 $PROXY_NETWORK；需要 NPM 所在的自定义网络（见运维手册 §4 与 P8-B1 预检文档）";;
+  esac
   docker network inspect "$PROXY_NETWORK" >/dev/null 2>&1 \
     || die "Docker 网络 $PROXY_NETWORK 不存在。请填写 Nginx Proxy Manager 所在网络（docker network ls），或先创建：docker network create $PROXY_NETWORK"
+  local members
+  members="$(docker network inspect "$PROXY_NETWORK" -f '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || true)"
+  members="${members//xiaowork-blog-api-1/}"; members="${members//xiaowork-blog-web-1/}"
+  [ -n "${members// /}" ] || warn "网络 $PROXY_NETWORK 中没有其他容器：请确认 Nginx Proxy Manager 确实在这个网络上"
 }
 
 prepare_dirs() {
