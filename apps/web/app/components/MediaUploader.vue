@@ -104,7 +104,7 @@ const statusText: Record<QueueItem['status'], string> = { checking: '校验中',
       @paste="onPaste"
     >
       <strong>点击选择、拖拽或粘贴图片</strong>
-      <span class="muted">JPG / PNG / WebP / GIF，单个不超过 {{ formatBytes(maxBytes) }}</span>
+      <span class="muted">JPG / PNG / WebP / GIF，单个不超过 {{ formatBytes(maxBytes) }}；上传时会自动移除 EXIF/GPS 等隐私信息，图片本身不变</span>
       <input ref="input" type="file" :accept="MEDIA_ACCEPT" :multiple="multiple" hidden @change="onPick">
     </div>
 

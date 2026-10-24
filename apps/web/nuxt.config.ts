@@ -23,6 +23,9 @@ export default defineNuxtConfig({
     '/admin/**': { headers: privatePage },
     '/account/**': { headers: privatePage },
   },
+  // Pre-compressed /_nuxt assets (.br/.gz) are served by Nitro itself, so the site does not depend on the
+  // reverse proxy enabling compression (P8-A performance baseline).
+  nitro: { compressPublicAssets: { gzip: true, brotli: true } },
   app: {
     head: {
       htmlAttrs: { lang: 'zh-CN' },

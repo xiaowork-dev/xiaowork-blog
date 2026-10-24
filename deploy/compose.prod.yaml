@@ -1,0 +1,142 @@
+# XiaoWork Blog — production stack (P8-A). Used by deploy/install.sh, update.sh, rollback.sh, backup.sh and
+# restore.sh; do not run `docker compose down -v` against it (that deletes the database volume).
+#
+#   Internet ─► Nginx Proxy Manager (separate stack, owns ports 80/443) ─► PROXY_NETWORK
+#                 /api/v1/*, /media/*  ─► xiaowork-blog-api:8080
+#                 everything else       ─► xiaowork-blog-web:3000
+#
+# No service publishes a host port: NPM reaches web/api over the shared Docker network, the database is
+# on an internal network without Internet access, and only api has outbound access (SMTP).
+#
+# Images are built on the server from the checked-out commit and tagged with APP_VERSION (the short
+# commit SHA), so the previous release stays available for rollback.
+
+name: xiaowork-blog
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  db:
+    <<: *hardening
+    image: postgres:18.6-alpine
+    # terse: error lines without DETAIL, which would otherwise repeat key values such as e-mail addresses
+    # from unique-constraint violations into the container log (P8-A log review).
+    command: ["postgres", "-c", "log_error_verbosity=terse"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in deploy/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in deploy/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    networks: [backend]
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  # One-shot goose migration with the same image as api; a no-op when the schema is current.
+  migrate:
+    image: xiaowork-blog-api:${APP_VERSION:?APP_VERSION is set by the deploy scripts}
+    entrypoint: ["/usr/local/bin/blog-migrate"]
+    command: ["up"]
+    restart: "no"
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [backend]
+
+  api:
+    <<: *hardening
+    image: xiaowork-blog-api:${APP_VERSION:?APP_VERSION is set by the deploy scripts}
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    environment:
+      HTTP_ADDR: ":8080"
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
+      MEDIA_ROOT: /data/media
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL (https://your.domain) in deploy/.env}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in deploy/.env}
+      SMTP_HOST: ${SMTP_HOST:?set SMTP_HOST in deploy/.env}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_TLS: ${SMTP_TLS:-starttls}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM in deploy/.env}
+      # Networks whose X-Forwarded-For is believed: the NPM proxy network and the app network (Nuxt SSR).
+      # install.sh fills this from `docker network inspect` when it is left empty.
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?set TRUSTED_PROXY_CIDRS (install.sh can detect it)}
+      MEDIA_MAX_BYTES: ${MEDIA_MAX_BYTES:-}
+      MEDIA_MAX_PIXELS: ${MEDIA_MAX_PIXELS:-}
+      AVATAR_MAX_BYTES: ${AVATAR_MAX_BYTES:-}
+      AVATAR_MAX_PIXELS: ${AVATAR_MAX_PIXELS:-}
+    volumes:
+      - ${DATA_DIR:?set DATA_DIR (absolute path) in deploy/.env}/media:/data/media
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks:
+      backend: {}
+      app: {}
+      proxy:
+        aliases: [xiaowork-blog-api]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  web:
+    <<: *hardening
+    image: xiaowork-blog-web:${APP_VERSION:?APP_VERSION is set by the deploy scripts}
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    environment:
+      NODE_ENV: production
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: "3000"
+      NUXT_API_INTERNAL_URL: http://api:8080
+      NUXT_PUBLIC_SITE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in deploy/.env}
+    depends_on:
+      api: { condition: service_healthy }
+    networks:
+      app: {}
+      proxy:
+        aliases: [xiaowork-blog-web]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+networks:
+  # Database traffic only; `internal` removes the route to the Internet.
+  backend:
+    internal: true
+  # Nuxt SSR → API. Fixed subnet so it can be listed in TRUSTED_PROXY_CIDRS.
+  app:
+    ipam:
+      config:
+        - subnet: ${APP_SUBNET:-172.30.240.0/24}
+  # The existing Nginx Proxy Manager network (created by the NPM stack, not by this file).
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:?set PROXY_NETWORK (the Docker network of Nginx Proxy Manager) in deploy/.env}
+
+volumes:
+  # Fixed name: survives `docker compose down`, project renames and image upgrades. Never add -v.
+  pgdata:
+    name: xiaowork-blog_pgdata

@@ -64,6 +64,23 @@ type inspected struct {
 	height int
 	frames int
 	img    image.Image // decoded still image (nil for GIF), reused for the thumbnail
+	// orientation is the JPEG EXIF orientation (1–8, 1 = as stored); the thumbnail is rotated to match.
+	orientation int
+}
+
+// verifySameImage re-reads the header of the cleaned file and returns its size; the dimensions and format
+// must not have changed.
+func verifySameImage(path string, in *inspected) (int64, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	cfg, name, err := image.DecodeConfig(f)
+	if err != nil || name != in.format.decoder || cfg.Width != in.width || cfg.Height != in.height {
+		return 0, errUndecodable
+	}
+	return f.Seek(0, io.SeekEnd)
 }
 
 // inspect validates a stored upload: extension, sniffed content type, header dimensions (checked before any
@@ -215,6 +232,7 @@ func writeThumbnail(in *inspected, w io.Writer) (bool, error) {
 	}
 	dst := image.NewRGBA(image.Rect(0, 0, tw, th))
 	draw.CatmullRom.Scale(dst, dst.Bounds(), in.img, in.img.Bounds(), draw.Src, nil)
+	dst = orient(dst, in.orientation)
 	var err error
 	switch in.format.thumbExt {
 	case "jpg":
@@ -233,4 +251,42 @@ func thumbMime(ext string) string {
 		return "image/jpeg"
 	}
 	return "image/png"
+}
+
+// orient applies an EXIF orientation (2–8) to an image so the thumbnail matches how browsers display the
+// original; 0/1 return the image unchanged.
+func orient(src *image.RGBA, o int) *image.RGBA {
+	if o < 2 || o > 8 {
+		return src
+	}
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	dw, dh := w, h
+	if o >= 5 {
+		dw, dh = h, w
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, dw, dh))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			var dx, dy int
+			switch o {
+			case 2: // mirror horizontal
+				dx, dy = w-1-x, y
+			case 3: // rotate 180
+				dx, dy = w-1-x, h-1-y
+			case 4: // mirror vertical
+				dx, dy = x, h-1-y
+			case 5: // transpose
+				dx, dy = y, x
+			case 6: // rotate 90 clockwise
+				dx, dy = h-1-y, x
+			case 7: // transverse
+				dx, dy = h-1-y, w-1-x
+			case 8: // rotate 270 clockwise
+				dx, dy = y, w-1-x
+			}
+			dst.Set(dx, dy, src.At(b.Min.X+x, b.Min.Y+y))
+		}
+	}
+	return dst
 }

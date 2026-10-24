@@ -225,6 +225,14 @@ func (s *Service) process(ctx context.Context, up *upload, kind string, uploader
 	case err != nil:
 		return nil, err
 	}
+	// Privacy: drop EXIF/GPS, XMP, IPTC and comments without re-encoding (ADR-0008), then make sure the
+	// cleaned file is still the same image before it is stored.
+	if in.orientation, err = stripMetadata(up.tempPath, in.format.mime); err != nil {
+		return nil, httpx.FieldErrors(map[string][]string{"file": {"DECODE_FAILED"}})
+	}
+	if size, err = verifySameImage(up.tempPath, in); err != nil {
+		return nil, httpx.FieldErrors(map[string][]string{"file": {"DECODE_FAILED"}})
+	}
 	digest, err := fileSHA256(up.tempPath)
 	if err != nil {
 		return nil, err

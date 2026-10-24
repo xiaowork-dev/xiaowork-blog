@@ -3,6 +3,7 @@ package media_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"net/http"
 	"os"
@@ -404,5 +405,51 @@ func TestLibraryListing(t *testing.T) {
 	admin.do(http.MethodDelete, "/api/v1/admin/media/"+id, nil, "")
 	if items, _ := list("?q=diagram"); len(items) != 0 {
 		t.Fatal("deleted media still listed")
+	}
+}
+
+// Privacy metadata is removed at upload (ADR-0008): a phone photo with GPS EXIF and an XMP author is
+// stored and served without them, the orientation survives, and size / SHA-256 describe the stored file.
+func TestUploadStripsPrivacyMetadata(t *testing.T) {
+	h := newHarness(t)
+	admin := h.user("ADMIN", true)
+	alice := h.user("USER", true)
+	plain := jpegImage(64, 48)
+	gps := []byte("Exif\x00\x00II\x2A\x00\x08\x00\x00\x00\x01\x00\x12\x01\x03\x00\x01\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00GPSLatitude=39.9042N GPSLongitude=116.4074E")
+	xmp := []byte("http://ns.adobe.com/xap/1.0/\x00<dc:creator>Alice Private</dc:creator>")
+	seg := func(marker byte, payload []byte) []byte {
+		n := len(payload) + 2
+		return append([]byte{0xFF, marker, byte(n >> 8), byte(n)}, payload...)
+	}
+	photo := append(append(append([]byte{0xFF, 0xD8}, seg(0xE1, gps)...), seg(0xE1, xmp)...), plain[2:]...)
+
+	for _, up := range []response{
+		admin.uploadAdmin("phone.jpg", photo),
+		alice.upload("/api/v1/me/avatar", "me.jpg", photo, nil),
+	} {
+		if up.Status != 200 && up.Status != 201 {
+			t.Fatalf("upload: %d %s", up.Status, up.Body)
+		}
+		url, _ := up.data()["url"].(string)
+		if url == "" {
+			url, _ = up.data()["avatar_url"].(string)
+		}
+		got := admin.get(url)
+		if got.Status != 200 || bytes.Contains(got.Body, []byte("GPS")) || bytes.Contains(got.Body, []byte("Alice Private")) {
+			t.Fatalf("served file still carries metadata (%d bytes)", len(got.Body))
+		}
+		if !bytes.Contains(got.Body, []byte("Exif\x00\x00MM")) {
+			t.Fatal("orientation tag not preserved")
+		}
+		id := strings.Split(url, "/")[2]
+		var size int64
+		var digest []byte
+		if err := h.pool.QueryRow(context.Background(), `SELECT size_bytes, sha256 FROM media_assets WHERE id = $1`, id).Scan(&size, &digest); err != nil {
+			t.Fatal(err)
+		}
+		sum := sha256.Sum256(got.Body)
+		if size != int64(len(got.Body)) || !bytes.Equal(digest, sum[:]) {
+			t.Fatalf("size/sha256 do not describe the stored file: %d vs %d", size, len(got.Body))
+		}
 	}
 }

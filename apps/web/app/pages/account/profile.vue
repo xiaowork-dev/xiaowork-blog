@@ -106,7 +106,7 @@ async function onAvatarPicked(e: Event) {
         <div class="avatar-actions">
           <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" class="visually-hidden" id="avatar-file" @change="onAvatarPicked">
           <label for="avatar-file" class="button button-small" :aria-disabled="uploading">{{ uploading ? '上传中…' : '更换头像' }}</label>
-          <p class="muted">支持 JPEG、PNG、WebP；建议使用正方形图片。</p>
+          <p class="muted">支持 JPEG、PNG、WebP；建议使用正方形图片。上传时会自动移除拍摄位置（GPS）等隐私信息。</p>
           <progress v-if="uploading" :value="progress" max="1" aria-label="上传进度" />
           <p v-if="avatarOk" class="alert alert-success" role="status">头像已更新。</p>
           <p v-if="avatarError" class="alert alert-error" role="alert">{{ avatarError }}</p>

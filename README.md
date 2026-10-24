@@ -1,6 +1,6 @@
 # XiaoWork Blog
 
-> **当前状态：P7 管理后台已完成（2026-10-24）**：V1.0 的业务功能已全部完成——公开博客、Markdown 编辑与发布、评论与用户中心，以及完整后台（控制台、文章、分类标签、评论、用户、媒体库、网站设置、关于页）。生产部署与上线（P8）尚未进行。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
+> **当前状态：P8-A 上线准备已完成（2026-10-24）**：V1.0 的业务功能已全部完成；P8-A 完成了综合验收、安全加固（上传图片去除 EXIF/GPS、安全响应头），并提供生产部署方案（`deploy/`：一键安装、更新、回滚、备份与恢复，已在隔离 Linux 环境演练）。**尚未部署到生产环境，v1.0.0 尚未正式发布**；正式上线（P8-B）需另行授权。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
@@ -24,7 +24,12 @@ scripts/e2e-articles.mjs      文章端到端自检（草稿隔离、发布、�
 scripts/e2e-public.mjs        前台端到端自检（分页、分类标签归档、中文搜索、SEO、sitemap/RSS、浏览量）
 scripts/e2e-comments.mjs      评论、用户中心与评论治理端到端自检（真实注册并通过 Mailpit 验证）
 scripts/e2e-admin.mjs         后台端到端自检（控制台、禁用用户、站点设置/外链/导航/关于页前台生效、XSS、引用保护）
-compose.yaml                  db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
+compose.yaml                  本地开发：db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
+deploy/                       生产部署：compose.prod.yaml、env.production.example、install/update/rollback/backup/restore/admin 脚本
+deploy/nginx/                 与 Nginx Proxy Manager 等价的 nginx 反代配置（参考与演练用）
+deploy/test/                  隔离的部署演练环境（Docker-in-Docker）
+docs/deploy/                  部署与运维手册、上线检查清单、性能基线与剩余风险
+RELEASE_NOTES_v1.0.0.md       v1.0.0 发布说明（草稿，正式发布前不生效）
 .data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
 docs/reference/               需求、架构、数据库、API、UI 规范
 docs/adr/                     设计决策记录
@@ -37,7 +42,7 @@ docs/handoffs/                每阶段交付记录
 - Docker Engine + Docker Compose v2（本地容器化首选）。
 - 直接开发：Node.js 24.22.1、pnpm 10.34.7、Go 1.27.3、PostgreSQL 18.6。
 - P0 测试端口仅监听 **127.0.0.1:3000** 与 **127.0.0.1:8080**，数据库无宿主机端口映射。
-- 不要把本开发示例直接当作生产部署；正式域名、HTTPS、Session、SMTP、备份属于后续阶段。
+- 根目录的 `compose.yaml` 只用于本地开发；生产部署使用 `deploy/compose.prod.yaml` 与 `deploy/*.sh`，见 `docs/deploy/部署与运维手册.md`。
 
 ## 本地首次启动（需能访问官方依赖源与 Docker 镜像仓库）
 
@@ -110,12 +115,12 @@ cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?s
 - 未实现的功能不提供伪装业务 API。
 - 图片只能经 Go 的 `/media/{id}/file` 受控读取（草稿图片游客 404）；`.data/media` 不得配置为反代静态目录，也不得提交 Git。
 - PostgreSQL 18 官方镜像须挂载 `/var/lib/postgresql`，不能沿用旧版常见 `/var/lib/postgresql/data` 方案。
-- 网站始终只允许通过 Nginx Proxy Manager 反代暴露正式流量；P8 才实施正式域名与 HTTPS。
+- 网站始终只允许通过 Nginx Proxy Manager 反代暴露正式流量；生产 Compose 不发布任何主机端口（P8-A）。
 - `.env`、用户数据、图片、备份与私钥禁止提交 Git。
 
 ## 验收门槛
 
-参见 `docs/handoffs/` 下各阶段交付记录（P0–P7）。
+参见 `docs/handoffs/` 下各阶段交付记录（P0–P7、P8-A）。
 
 ## 图片与媒体（P3）
 
@@ -167,3 +172,12 @@ docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin
 - **网站设置**：可修改站名、描述、Logo、Favicon、个人栏头像、昵称和简介、个人栏外链（仅限 https 与 mailto，可排序、启停）、顶部导航（为空时使用默认导航）和默认 SEO；图片从媒体库选择。保存后前台立即生效。SMTP、数据库等部署密钥只放在环境变量中，后台不显示也不能修改。
 - **关于页**：Markdown 编辑加实时预览。**保存即公开**，没有草稿。
 - 后台端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-admin.mjs http://127.0.0.1:3000 http://127.0.0.1:8025`（会恢复原有的站点设置）。设计取舍见 `docs/adr/ADR-0007-P7管理后台实现决策.md`。
+
+## 上线准备与生产部署（P8-A）
+
+- **生产部署**：在服务器上 `git clone` 后运行 `sudo deploy/install.sh` 两次（第一次生成 `deploy/.env`，填写域名、SMTP 与 NPM 网络后再运行），再用 `sudo deploy/admin.sh create-admin …` 创建管理员，并在 Nginx Proxy Manager 中添加代理主机。完整步骤见 `docs/deploy/部署与运维手册.md`，上线逐项检查见 `docs/deploy/上线检查清单.md`。
+- **更新与回滚**：`sudo deploy/update.sh`（自动备份 → 迁移 → 切换 → 健康检查，失败自动回滚）；`sudo deploy/rollback.sh` 切回上一版本。
+- **备份与恢复**：`sudo deploy/backup.sh`（数据库、图片、配置及校验和）；`sudo deploy/restore.sh <备份目录>`。异地备份与换服务器恢复见手册 §10、§11。
+- **隐私**：新上传的图片会自动移除 EXIF / GPS / XMP 等元数据，像素与显示方向不变。
+- **安全响应头**：CSP、HSTS（仅 https）、`X-Frame-Options: DENY`、`nosniff`、`Referrer-Policy`、`Permissions-Policy`。
+- 设计取舍见 `docs/adr/ADR-0008-P8上线准备与生产部署决策.md`；性能基线与剩余风险见 `docs/deploy/性能基线与剩余风险.md`。
