@@ -46,10 +46,10 @@ GitHub Release 的 “Set as a pre-release” 必须与标签是否带 `-` 后�
    git push origin v1.0.1
    ```
 
-4. 创建 GitHub Release，内容取自 CHANGELOG 中该版本的段落：
+4. 创建 GitHub Release。发布说明事先写在 `docs/releases/<版本>.md` 中（按 §5 的模板，与 CHANGELOG 中该版本的段落一致），并随第 2 步一起提交：
 
    ```bash
-   gh release create v1.0.1 --verify-tag --title "XiaoWork Blog v1.0.1" --notes-file notes.md
+   gh release create v1.0.1 --verify-tag --title "XiaoWork Blog v1.0.1" --notes-file docs/releases/v1.0.1.md
    # 预发布版本加 --prerelease；正式版本不要勾选 pre-release
    ```
 

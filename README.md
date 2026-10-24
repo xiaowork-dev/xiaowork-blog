@@ -3,9 +3,9 @@
 一个自托管的个人博客系统：博主在后台用 Markdown 写作和管理网站，读者浏览、搜索、注册并发表评论。使用 Docker 部署在你自己的 Linux 服务器上，由现有的 Nginx Proxy Manager 提供 HTTPS。
 
 > **当前状态：尚未发布正式版本。**
-> - V1.0 的功能已经开发完成，正在进行生产环境上线验收；验收通过后发布 `v1.0.0`。
+> - V1.0 的功能已经开发完成，正在准备预发布版 `v1.0.0-rc.1` 并进行生产环境上线验收；验收通过后发布 `v1.0.0`。
 > - 在此之前，`deploy/manage.sh` 找不到可安装的正式版本，这是预期行为。
-> - **许可证尚未确定**（见 `docs/开源许可审查.md`）：仓库加入 `LICENSE` 文件之前，代码保留所有权利。
+> - 本项目以 [MIT 许可证](LICENSE) 开源。
 
 ## 功能
 
@@ -88,6 +88,7 @@ sudo deploy/manage.sh install
 | `docs/deploy/上线检查清单.md` | 正式上线前逐项检查 |
 | `docs/deploy/性能基线与剩余风险.md` | 性能数据与已知风险 |
 | `CHANGELOG.md` | 各版本的变化与升级说明 |
+| `docs/releases/` | 各版本的发布说明（与 GitHub Release 内容一致） |
 | `docs/RELEASING.md` | 版本号规则与发布流程（维护者） |
 | `docs/开发指南.md` | 本地开发、测试、各模块说明（开发者） |
 | `docs/reference/` | 需求、架构、数据库、API 与 UI 设计 |
@@ -95,8 +96,14 @@ sudo deploy/manage.sh install
 
 ## 参与与安全
 
-- 参与贡献：`CONTRIBUTING.md`（许可证确定前暂不合并外部代码）。
+- 参与贡献：`CONTRIBUTING.md`。
 - 报告安全问题：`SECURITY.md`，请私下报告，不要公开提交 Issue。
+
+## 许可证
+
+[MIT](LICENSE)，Copyright (c) 2026 xiaowork-dev。
+
+源代码中使用的第三方素材（部分图标路径来自 [Tabler Icons](https://github.com/tabler/tabler-icons)，MIT）及其许可声明见 `THIRD_PARTY_NOTICES.md`。通过 npm 和 Go 模块安装的依赖沿用各自的许可，审查结果见 `docs/开源许可审查.md`。
 
 ## 技术栈
 

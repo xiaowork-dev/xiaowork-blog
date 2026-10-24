@@ -3,6 +3,11 @@ on:
   push:
   pull_request:
 
+# Least privilege: CI only reads the repository (and its releases, in the deploy job). There is no
+# deployment or release workflow — releases are created manually (docs/RELEASING.md).
+permissions:
+  contents: read
+
 jobs:
   web:
     runs-on: ubuntu-24.04

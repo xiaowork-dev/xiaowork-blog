@@ -2,9 +2,20 @@
 
 本文件记录每个正式版本的变化，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。发布流程见 `docs/RELEASING.md`。
 
-> 截至目前**还没有任何正式版本**。下列内容计划作为 `v1.0.0` 发布，前提是生产环境上线验收（P8-B）通过。
+> 截至目前**还没有任何发布版本**。下列内容将先作为预发布版 `v1.0.0-rc.1` 发布，用于生产环境上线验收（P8-B）；验收通过后在同一提交上发布正式版 `v1.0.0`。
 
-## [Unreleased] — 计划为 1.0.0
+## [Unreleased]
+
+（暂无）
+
+## [1.0.0-rc.1] — 预发布，标签与 GitHub Release 等待项目负责人确认后创建
+
+发布说明：`docs/releases/v1.0.0-rc.1.md`。
+
+### 许可证
+
+- 以 MIT 许可证开源（`LICENSE`，Copyright (c) 2026 xiaowork-dev）；第三方素材声明见 `THIRD_PARTY_NOTICES.md`。
+- 移除了无法确认再分发权限的设计概念图 `docs/reference/visual_overview.png`。
 
 ### 新增
 

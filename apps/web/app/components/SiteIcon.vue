@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // Small line icon set (24×24, stroke = currentColor). Purely decorative: callers provide the accessible name.
+// The github path is adapted from Tabler Icons "brand-github" and parts of rss/mail match Tabler Icons
+// (MIT, Copyright (c) 2020-2026 Paweł Kuna); see THIRD_PARTY_NOTICES.md.
 const props = defineProps<{ name: string, size?: number }>()
 
 const PATHS: Record<string, string[]> = {
