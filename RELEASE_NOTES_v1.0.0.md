@@ -43,8 +43,13 @@ XiaoWork Blog 是一个自托管的个人博客：博主在后台撰写和管理
 ## 部署与运维
 
 - 使用 Docker Compose 部署，接入现有的 Nginx Proxy Manager；容器不发布任何主机端口，数据库位于内部网络。
-- 一键脚本：`install.sh`、`update.sh`（更新前自动备份；迁移失败时不切换；新版本健康检查失败时自动回滚）、`rollback.sh`、`backup.sh`、`restore.sh`、`admin.sh`。
-- 文档：`docs/deploy/部署与运维手册.md`、`docs/deploy/上线检查清单.md`。
+- 统一管理入口 `deploy/manage.sh`：
+  - 首次安装时引导填写配置（数据库密码与密钥自动生成，只保存在服务器上）；
+  - 查看状态；从 GitHub Releases 检查新版本，只推荐正式版，区分预发布版与开发代码；
+  - 更新前显示版本、发布日期、更新说明与数据库迁移，确认后执行；
+  - 回滚、备份、恢复、只读环境预检、创建管理员。
+- 更新时先自动备份；迁移失败时不切换；新版本健康检查失败时自动回滚。没有自动部署，也没有定时自动更新。
+- 文档：`docs/deploy/部署与运维手册.md`、`docs/deploy/上线检查清单.md`、`docs/RELEASING.md`。
 
 ## 技术栈
 

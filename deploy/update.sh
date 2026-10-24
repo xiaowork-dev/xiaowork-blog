@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# One-command update to a new version (P8-A).
+# Update engine (P8-A; explicit target since P8-B2). Normally started by deploy/manage.sh, which picks a
+# published release, shows the plan and asks for confirmation.
 #
-#   sudo deploy/update.sh                 # fetch origin/main and deploy it
-#   sudo deploy/update.sh --ref v1.0.1    # deploy a tag / branch / commit
+#   sudo deploy/update.sh --ref v1.0.1    # deploy a release tag (or a commit); a branch name means its
+#                                         # origin/<branch> head and is treated as development code
 #   sudo deploy/update.sh --no-fetch      # deploy the commit that is already checked out
+#
+# There is no default target: an update never silently installs the newest main commit.
 #
 # Steps: pre-checks → build the new images (the running site is untouched) → full backup → migrate →
 # switch api/web → health checks + smoke test. If anything fails after the switch, the previous images are
@@ -15,16 +18,18 @@ source "$(dirname "$0")/lib.sh"
 # below cannot change the script text that is still to be executed.
 {
 
-REF=origin/main
+REF=""
 FETCH=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --ref) REF="${2:?--ref 需要参数}"; shift 2;;
     --no-fetch) FETCH=0; shift;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0;;
     *) die "未知参数：$1";;
   esac
 done
+
+[ "$FETCH" = 0 ] || [ -n "$REF" ] || die "请指定目标版本：deploy/manage.sh update（推荐，列出正式版本并确认），或 deploy/update.sh --ref <版本标签>"
 
 check_tools
 load_env
@@ -41,7 +46,13 @@ if [ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]; then
 fi
 if [ "$FETCH" = 1 ]; then
   log "获取最新代码…"
-  git -C "$REPO_DIR" fetch --tags origin
+  git -C "$REPO_DIR" fetch --tags origin \
+    || die "无法从 origin 获取代码（网络不可用，或远端标签被改动——发布标签不允许移动，请先核实再处理）；网站仍在运行当前版本"
+  if git -C "$REPO_DIR" rev-parse -q --verify "refs/remotes/origin/$REF" >/dev/null; then
+    warn "$REF 是分支：将部署 origin/$REF 的最新提交（开发代码，不是正式版本）"
+    REF="origin/$REF"
+  fi
+  git -C "$REPO_DIR" rev-parse -q --verify "$REF^{commit}" >/dev/null || die "版本 $REF 不存在；网站仍在运行当前版本"
   git -C "$REPO_DIR" checkout --detach -q "$REF" || die "无法切换到 $REF"
 fi
 NEW="$(repo_version)"
@@ -77,9 +88,9 @@ log "切换 api / web 到 $NEW…"
 # Inside the condition so that a failing start (compose exits non-zero when api never gets healthy) leads to
 # the automatic rollback below instead of aborting the script.
 if dc up -d --no-deps api web && wait_healthy api web && smoke_test; then
-  record_release "$NEW" "$OLD"
+  record_release "$NEW" "$OLD" "${REF:-checked-out}"
   prune_images
-  log "更新成功：$NEW（数据库结构版本 $SCHEMA_BEFORE → $SCHEMA_AFTER）。回滚：deploy/rollback.sh"
+  log "更新成功：$NEW（数据库结构版本 $SCHEMA_BEFORE → $SCHEMA_AFTER）。回滚：deploy/manage.sh rollback"
   exit 0
 fi
 

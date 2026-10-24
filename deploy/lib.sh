@@ -201,10 +201,53 @@ prune_backups() {
 }
 
 record_release() {
-  local new="${1:?}" old="${2:-}"
+  local new="${1:?}" old="${2:-}" ref="${3:-}" tag
   [ -n "$old" ] && [ "$old" != "$new" ] && echo "$old" > "$STATE_DIR/previous"
   echo "$new" > "$STATE_DIR/current"
-  echo "$(date -u +%FT%TZ) $new" >> "$STATE_DIR/history"
+  echo "$(date -u +%FT%TZ) $new ${ref:--}" >> "$STATE_DIR/history"
+  # Pin every release tag on the deployed commit: a tag that later points elsewhere is refused (pinned_tag_ok).
+  for tag in $(release_tags_at "$new"); do
+    grep -qx "$tag [0-9a-f]*" "$STATE_DIR/tags" 2>/dev/null || echo "$tag $(git -C "$REPO_DIR" rev-parse "$tag^{commit}")" >> "$STATE_DIR/tags"
+  done
+}
+
+# Release tags follow vMAJOR.MINOR.PATCH with an optional pre-release suffix (docs/RELEASING.md).
+RELEASE_TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+
+# release_tags_at COMMIT: release tags pointing at COMMIT (nothing when it is an unreleased commit).
+release_tags_at() {
+  git -C "$REPO_DIR" tag --points-at "${1:?}" 2>/dev/null | grep -E "$RELEASE_TAG_RE" || true
+}
+
+# pinned_tag_ok TAG: false when TAG was deployed here before and now resolves to a different commit.
+pinned_tag_ok() {
+  local pinned now
+  pinned="$(awk -v t="${1:?}" '$1 == t {print $2}' "${STATE_DIR:-/nonexistent}/tags" 2>/dev/null | head -n 1 || true)"
+  [ -z "$pinned" ] && return 0
+  now="$(git -C "$REPO_DIR" rev-parse -q --verify "$1^{commit}" 2>/dev/null || true)"
+  [ "$now" = "$pinned" ]
+}
+
+# cidr_overlap A/len B/len: true when two IPv4 ranges intersect (IPv6 ranges are ignored).
+ip4_to_int() { local IFS=.; set -- $1; echo $(( ($1 << 24) + ($2 << 16) + ($3 << 8) + $4 )); }
+cidr_overlap() {
+  local a="${1%/*}" al="${1#*/}" b="${2%/*}" bl="${2#*/}" as ae bs be
+  case "$a$b" in *:*) return 1;; esac
+  as=$(( $(ip4_to_int "$a") & ~((1 << (32 - al)) - 1) & 0xFFFFFFFF )); ae=$(( as + (1 << (32 - al)) - 1 ))
+  bs=$(( $(ip4_to_int "$b") & ~((1 << (32 - bl)) - 1) & 0xFFFFFFFF )); be=$(( bs + (1 << (32 - bl)) - 1 ))
+  [ "$as" -le "$be" ] && [ "$bs" -le "$ae" ]
+}
+
+# subnet_conflicts SUBNET: names of Docker networks (other than this stack's own) whose ranges overlap SUBNET.
+subnet_conflicts() {
+  local id name nets s
+  for id in $(docker network ls -q); do
+    name="$(docker network inspect -f '{{.Name}}' "$id")"
+    [ "$name" = "${PROJECT}_app" ] && continue
+    nets="$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}} {{end}}' "$id")"
+    for s in $nets; do cidr_overlap "$s" "${1:?}" && echo "$name($s)"; done
+  done
+  return 0
 }
 
 # prune_images keeps the current and previous release images and removes older xiaowork-blog tags.

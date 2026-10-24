@@ -36,6 +36,23 @@ docker exec xwb-drill-a bash -c 'cd /opt/xiaowork-blog && deploy/update.sh'
 docker exec xwb-drill-a bash -c 'cd /opt/xiaowork-blog && deploy/rollback.sh'
 ```
 
+### 版本管理演练（P8-B2）
+
+`drill mock start` 在演练容器中启动一个模拟 GitHub Releases API（`http://127.0.0.1:9999`，仓库名 `xwb/blog`），不访问真实的 GitHub。为方便起见，可以建一个包装命令：
+
+```bash
+docker exec xwb-drill-a sh -c 'printf "#!/bin/sh\ncd /opt/xiaowork-blog && GITHUB_API=http://127.0.0.1:9999 GITHUB_REPO=xwb/blog exec deploy/manage.sh \"\$@\"\n" > /usr/local/bin/m && chmod +x /usr/local/bin/m'
+docker exec xwb-drill-a drill mock start
+docker exec xwb-drill-a drill release v0.1.0 stable            # 在 origin 的 main 头部打标签并发布
+docker exec xwb-drill-a drill release v0.2.0-rc.1 prerelease   # 预发布版；draft 表示草稿（应被忽略）
+docker exec xwb-drill-a drill scenario unreleased              # main 上的未发布提交
+docker exec -it xwb-drill-a m install                          # 交互式首次安装（引导配置）
+docker exec xwb-drill-a m check
+docker exec -it xwb-drill-a m update                           # 显示计划，输入版本号确认
+docker exec xwb-drill-a drill mock mode 403                    # 也可以用 500、badjson、ok；drill mock stop 模拟断网
+docker exec xwb-drill-a drill move-tag v0.1.0                  # 模拟发布标签被篡改
+```
+
 恢复演练使用第二个全新的演练容器：把备份目录复制到 `/drill`，然后按运维手册 §11 执行。
 
 演练值说明：

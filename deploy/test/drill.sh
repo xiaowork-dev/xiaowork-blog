@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Deployment drill helper (P8-A). Runs INSIDE an isolated Docker-in-Docker container that plays the role of a
-# fresh Linux server; it never touches the developer's own Docker volumes. See deploy/test/README.md.
+# Deployment drill helper (P8-A, release drills since P8-B2). Runs INSIDE an isolated Docker-in-Docker container
+# that plays the role of a fresh Linux server; it never touches the developer's own Docker volumes and never
+# talks to the real GitHub. See deploy/test/README.md.
 #
 #   drill.sh prepare           tools, base images, Git origin with a snapshot of /src, simulated NPM + mail
 #   drill.sh configure         fill deploy/.env for the drill (https://localhost:18443, mail catcher)
@@ -10,31 +11,35 @@
 #                                fix-api        – reverts broken-api
 #                                bad-migration  – adds a migration with invalid SQL
 #                                drop-bad-migration – removes it again
+#                                unreleased     – a commit on main that is not part of any release
 #   drill.sh sync              copy the current /src tree into a new origin commit (the server updates via update.sh)
 #   drill.sh counts            row counts used to compare before/after
+#   drill.sh mock start|stop|mode ok|403|500|badjson   mock GitHub Releases API on http://127.0.0.1:9999
+#   drill.sh release TAG [stable|prerelease|draft]      tag the origin main head and publish it in the mock
+#   drill.sh move-tag TAG      force-move a published tag to another commit (tampering test)
 set -Eeuo pipefail
 SERVER=/opt/xiaowork-blog          # the "server" checkout used by the deploy scripts
 ORIGIN=/work/origin.git            # bare repository playing GitHub
-DEV=/work/dev                      # developer clone used to push scenario commits
+DEV=/work/dev                      # developer clone used to push scenario commits and tags
 DRILL=/drill                       # host folder: base-images.tar, outputs
+MOCK=/work/mock                    # mock API state: mode, releases.lines
 
 # snapshot DIR: copy the working tree from /src without dependencies, build output, local data or .git.
 snapshot() {
-  tar -C /src --exclude=./.git --exclude=./.data --exclude="*/node_modules" --exclude="*/.output" --exclude="*/.nuxt"       --exclude=./deploy/.env -cf - . | tar -C "$1" -xf -
+  tar -C /src --exclude=./.git --exclude=./.data --exclude="*/node_modules" --exclude="*/.output" --exclude="*/.nuxt" \
+      --exclude=./deploy/.env -cf - . | tar -C "$1" -xf -
 }
 
 prepare() {
-  apk add --no-cache -q bash git openssl coreutils findutils tar curl >/dev/null
+  apk add --no-cache -q bash git openssl coreutils findutils tar curl iproute2 util-linux-misc >/dev/null
   git config --global user.email drill@example.test
   git config --global user.name "deploy drill"
   git config --global init.defaultBranch main
   git config --global --add safe.directory '*'
   if [ -f "$DRILL/base-images.tar" ]; then docker load -q -i "$DRILL/base-images.tar"; fi
 
-  # Snapshot of the working tree (no dependencies, build output, local data or .git).
-  rm -rf /work && mkdir -p /work/seed
-  tar -C /src --exclude=./.git --exclude=./.data --exclude='*/node_modules' --exclude='*/.output' --exclude='*/.nuxt' \
-      --exclude=./deploy/.env -cf - . | tar -C /work/seed -xf -
+  rm -rf /work && mkdir -p /work/seed "$MOCK"
+  snapshot /work/seed
   find /work/seed -name "*.sh" -exec sed -i 's/\r$//' {} + -exec chmod +x {} +
   git -C /work/seed init -q && git -C /work/seed add -A && git -C /work/seed commit -qm "drill: v1 snapshot"
   git clone -q --bare /work/seed "$ORIGIN"
@@ -63,6 +68,7 @@ configure() {
          -e 's|^SMTP_HOST=.*|SMTP_HOST=mail-sim|' -e 's|^SMTP_PORT=.*|SMTP_PORT=1025|' -e 's|^SMTP_TLS=.*|SMTP_TLS=none|' \
          -e 's|^PROXY_NETWORK=.*|PROXY_NETWORK=npm_proxy|' \
          -e 's|^# *GOPROXY=.*|GOPROXY=https://goproxy.cn,direct|' "$env"
+  grep -q '^GOPROXY=' "$env" || echo 'GOPROXY=https://goproxy.cn,direct' >> "$env"
   echo "configured $env (drill values; SMTP_TLS=none is accepted only because the site is https://localhost)"
 }
 
@@ -76,7 +82,7 @@ scenario() {
 -- Drill-only additive migration: proves update.sh runs migrations and that rollback keeps working.
 -- +goose Up
 CREATE TABLE drill_marker (id integer PRIMARY KEY, note text NOT NULL);
-INSERT INTO drill_marker VALUES (1, 'added by the P8-A update drill');
+INSERT INTO drill_marker VALUES (1, 'added by the update drill');
 -- +goose Down
 DROP TABLE drill_marker;
 SQL
@@ -93,6 +99,9 @@ SQL
     drop-bad-migration)
       git -C "$DEV" rm -q apps/api/db/migrations/00009_drill_broken.sql
       push "drill: remove invalid migration";;
+    unreleased)
+      date -u +%FT%TZ >> "$DEV/docs/drill-unreleased.txt"
+      push "drill: unreleased work on main";;
     *) echo "unknown scenario $1"; exit 2;;
   esac
 }
@@ -112,12 +121,59 @@ UNION ALL SELECT 'users', count(*) FROM users
 UNION ALL SELECT 'comments', count(*) FROM comments
 UNION ALL SELECT 'media_ready', count(*) FROM media_assets WHERE state = 'READY'
 UNION ALL SELECT 'social_links', count(*) FROM site_social_links
-UNION ALL SELECT 'static_pages', count(*) FROM static_pages
-UNION ALL SELECT 'schema', max(version_id) FROM goose_db_version WHERE is_applied;
+UNION ALL SELECT 'static_pages', count(*) FROM static_pages;
 SELECT 'site', site_title || ' | ' || profile_bio FROM site_settings;
 SQL
   echo "media_files $(find /srv/xiaowork-blog/media -type f | wc -l)"
   echo "media_sha $(find /srv/xiaowork-blog/media -type f -exec sha256sum {} + | awk '{print $1}' | sort | sha256sum | cut -c1-16)"
+}
+
+# Mock of GET /repos/xwb/blog/releases (the only GitHub endpoint manage.sh uses). The response is built from
+# $MOCK/releases.lines (one JSON object per line, newest last); $MOCK/mode simulates failures.
+mock() {
+  case "$1" in
+    start)
+      mkdir -p "$MOCK"; [ -f "$MOCK/mode" ] || echo ok > "$MOCK/mode"; touch "$MOCK/releases.lines"
+      cat > "$MOCK/server.mjs" <<'JS'
+import http from 'node:http'
+import fs from 'node:fs'
+http.createServer((req, res) => {
+  const mode = fs.readFileSync('/mock/mode', 'utf8').trim()
+  const json = (code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(body) }
+  if (mode === '403') return json(403, '{"message":"API rate limit exceeded"}')
+  if (mode === '500') return json(500, '{"message":"Server Error"}')
+  if (mode === 'badjson') return json(200, '<html>maintenance</html>')
+  if (!/^\/repos\/xwb\/blog\/releases(\?|$)/.test(req.url)) return json(404, '{"message":"Not Found"}')
+  const lines = fs.readFileSync('/mock/releases.lines', 'utf8').split('\n').filter(Boolean).reverse()
+  json(200, '[' + lines.join(',') + ']')
+}).listen(9999)
+JS
+      docker rm -f mock-github >/dev/null 2>&1 || true
+      docker run -d --name mock-github -p 127.0.0.1:9999:9999 -v "$MOCK:/mock:ro" node:24.22.1-alpine node /mock/server.mjs >/dev/null
+      echo "mock GitHub API on http://127.0.0.1:9999 (GITHUB_REPO=xwb/blog)";;
+    stop) docker stop mock-github >/dev/null && echo "mock stopped";;
+    mode) echo "${2:?mode}" > "$MOCK/mode"; echo "mock mode ${2}";;
+    *) echo "mock start|stop|mode MODE"; exit 2;;
+  esac
+}
+
+release() {
+  local tag="${1:?tag}" kind="${2:-stable}" draft=false pre=false
+  case "$kind" in draft) draft=true;; prerelease) pre=true;; stable) ;; *) echo "kind?"; exit 2;; esac
+  git -C "$DEV" pull -q origin main
+  git -C "$DEV" tag -a "$tag" -m "release $tag"
+  git -C "$DEV" push -q origin "$tag"
+  printf '{"tag_name":"%s","name":"XiaoWork Blog %s","draft":%s,"prerelease":%s,"published_at":"%s","body":"## %s\\n\\n- drill release notes for %s\\n- commit %s"}\n' \
+    "$tag" "$tag" "$draft" "$pre" "$(date -u +%FT%TZ)" "$tag" "$tag" "$(git -C "$DEV" rev-parse --short=12 HEAD)" >> "$MOCK/releases.lines"
+  echo "released $tag ($kind) at $(git -C "$DEV" rev-parse --short=12 "$tag^{commit}")"
+}
+
+move_tag() {
+  local tag="${1:?tag}" other
+  other="$(git -C "$DEV" rev-parse "$tag^{commit}~1")"
+  git -C "$DEV" tag -f -a "$tag" -m "moved $tag" "$other" >/dev/null
+  git -C "$DEV" push -q -f origin "$tag"
+  echo "moved $tag to $(git -C "$DEV" rev-parse --short=12 "$tag^{commit}") in origin"
 }
 
 case "${1:-}" in
@@ -126,5 +182,8 @@ case "${1:-}" in
   scenario) scenario "${2:?scenario name}";;
   sync) sync;;
   counts) counts;;
-  *) sed -n '2,13p' "$0"; exit 2;;
+  mock) shift; mock "$@";;
+  release) shift; release "$@";;
+  move-tag) move_tag "${2:-}";;
+  *) sed -n '2,19p' "$0"; exit 2;;
 esac
