@@ -101,7 +101,7 @@ async function onLogout() {
         <div class="account-links">
           <template v-if="user">
             <NuxtLink v-if="user.role === 'ADMIN'" to="/admin/articles">后台</NuxtLink>
-            <span class="who" :title="user.nickname">{{ user.nickname }}</span>
+            <NuxtLink to="/account/profile" class="who" :title="`个人中心：${user.nickname}`">{{ user.nickname }}</NuxtLink>
             <button type="button" class="link-button" :disabled="loggingOut" @click="onLogout">退出</button>
           </template>
           <template v-else>
@@ -137,6 +137,8 @@ async function onLogout() {
         <div class="drawer-account">
           <template v-if="user">
             <span class="muted">已登录：{{ user.nickname }}</span>
+            <NuxtLink to="/account/profile">个人中心</NuxtLink>
+            <NuxtLink to="/account/comments">我的评论</NuxtLink>
             <NuxtLink v-if="user.role === 'ADMIN'" to="/admin/articles">后台管理</NuxtLink>
             <button type="button" class="link-button" :disabled="loggingOut" @click="onLogout">退出登录</button>
           </template>

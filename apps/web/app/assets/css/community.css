@@ -1,0 +1,123 @@
+/* P6: comments, user centre and comment moderation. Tokens from main.css; same cards/radius as blog.css. */
+
+/* ---- article comments (UI/UX §5) ---- */
+.post-main { min-width: 0; display: grid; gap: 24px; align-content: start }
+.comments { padding: 28px 32px 32px; background: var(--card); border: 1px solid var(--border); border-radius: 14px }
+.comments-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px }
+.comments-head h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px }
+.comments-count { min-width: 24px; padding: 0 8px; font-size: 13px; line-height: 22px; text-align: center; color: var(--accent); background: var(--accent-soft); border-radius: 999px }
+.comments-sort { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden }
+.comments-sort button { min-height: 34px; padding: 0 14px; font: inherit; font-size: 14px; color: var(--muted); background: var(--card); border: 0; cursor: pointer }
+.comments-sort button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); font-weight: 600 }
+.comments-entry { margin-bottom: 20px }
+.comments-note { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; padding: 14px 16px; color: var(--muted); font-size: 15px; background: var(--bg); border: 1px dashed var(--border); border-radius: 12px }
+.comments-verify { display: grid }
+.comments-verify p { margin: 0 }
+.comments-verify .resend { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px }
+.comments-verify .resend .field { flex: 1 1 220px; margin: 0 }
+.comments-verify .resend .button { width: auto }
+.comments-empty { margin: 8px 0 0; color: var(--muted); text-align: center }
+.comments-more { display: flex; justify-content: center; margin-top: 16px }
+
+.comment-composer { display: grid; gap: 8px }
+.comment-composer textarea {
+  width: 100%; min-height: 96px; padding: 10px 12px; font: inherit; font-size: 15px; line-height: 1.7; color: var(--text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px; resize: vertical;
+}
+.comment-composer textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus) }
+.comment-composer textarea[aria-invalid="true"] { border-color: var(--error) }
+.composer-target { font-size: 14px; color: var(--accent); font-weight: 600 }
+.composer-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.composer-count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums }
+.composer-count.over { color: var(--error); font-weight: 600 }
+.composer-actions { display: flex; gap: 8px }
+.composer-error { margin: 0 }
+.comment-replies .comment-composer, .comment-thread > .comment > .comment-main > .comment-composer { margin-top: 10px }
+
+.comment-list, .comment-replies { margin: 0; padding: 0; list-style: none }
+.comment-thread { padding: 16px 0; border-top: 1px solid var(--border) }
+.comment-thread:first-child { border-top: 0; padding-top: 4px }
+.comment { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px }
+.comment-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; color: var(--accent); font-weight: 700; background: var(--accent-soft) }
+.comment-avatar img { width: 100%; height: 100%; object-fit: cover }
+.comment-placeholder .comment-avatar { color: var(--muted); background: var(--bg) }
+.comment-main { min-width: 0 }
+.comment-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 14px }
+.comment-author { font-weight: 650; color: var(--text); overflow-wrap: anywhere }
+.owner-badge { display: inline-block; padding: 0 7px; font-size: 12px; line-height: 20px; color: var(--on-accent); background: var(--accent); border-radius: 6px }
+.comment-target { color: var(--muted) }
+.comment-time { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums }
+.comment-text { margin: 6px 0 0; font-size: 15px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word }
+.comment-text a { overflow-wrap: anywhere }
+.mention { color: var(--accent) }
+.comment-gone { color: var(--muted); font-style: italic }
+.comment-actions { display: flex; gap: 14px; margin-top: 4px; font-size: 13px }
+.comment-actions .link-button { padding: 4px 0; font-size: 13px; color: var(--muted) }
+.comment-actions .link-button:hover { color: var(--accent) }
+.comment-actions .danger:hover { color: var(--error) }
+/* Two visual levels only: every reply sits one step in, whatever its real depth. */
+.comment-replies { display: grid; gap: 14px; margin-top: 14px; padding: 12px 0 2px 14px; border-left: 2px solid var(--border) }
+.comment-replies .comment { grid-template-columns: 30px minmax(0, 1fr); gap: 10px }
+.comment-replies .comment-avatar { width: 30px; height: 30px; font-size: 13px }
+.replies-more { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; padding-left: 16px; font-size: 14px }
+
+/* ---- user centre (UI/UX §6.3) ---- */
+.account-layout {
+  flex: 1; width: 100%; max-width: 1040px; margin: 0 auto; padding: 32px 24px 56px;
+  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start;
+}
+.account-nav { position: sticky; top: 88px; display: grid; gap: 4px; padding: 16px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 14px }
+.account-who { margin: 0 0 8px; padding: 0 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.account-nav a { padding: 9px 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 15px }
+.account-nav a:hover { background: var(--bg) }
+.account-nav a.router-link-active { color: var(--accent); background: var(--accent-soft); font-weight: 600 }
+.account-main { min-width: 0 }
+.account-main:focus { outline: none; box-shadow: none }
+.account-page { display: grid; gap: 20px }
+.account-page .section-title { margin: 0 }
+.account-card { padding: 22px 24px; background: var(--card); border: 1px solid var(--border); border-radius: 14px }
+.account-card h2 { margin: 0 0 12px; font-size: 18px }
+.account-card textarea {
+  width: 100%; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--text); background: var(--card);
+  border: 1px solid var(--border); border-radius: 10px; resize: vertical;
+}
+.account-card textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus) }
+.avatar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 20px }
+.account-avatar { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; background: var(--accent-soft) }
+.account-avatar-text { display: grid; place-items: center; color: var(--accent); font-size: 32px; font-weight: 800 }
+.avatar-actions { display: grid; gap: 8px; justify-items: start; flex: 1 1 220px }
+.avatar-actions .alert, .avatar-actions .muted { margin: 0 }
+.avatar-actions label.button[aria-disabled="true"] { opacity: .6; pointer-events: none }
+.avatar-actions progress { width: 100%; max-width: 280px; height: 6px; accent-color: var(--accent) }
+#avatar-file:focus-visible + label { box-shadow: var(--focus) }
+.email-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 8px; font-weight: 600; overflow-wrap: anywhere }
+.session-actions { display: flex; flex-wrap: wrap; gap: 12px }
+.my-comments { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none }
+.my-comment { display: grid; gap: 6px; padding: 16px 20px }
+.my-comment-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px }
+.my-comment-head .badge { margin: 0 }
+.my-comment-article { font-weight: 650; text-decoration: none; overflow-wrap: anywhere }
+.my-comment .comment-text, .my-comment .muted { margin: 0 }
+.my-comment-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 13px; color: var(--muted) }
+.my-comment-foot .link-button { padding: 2px 0; font-size: 13px }
+
+/* ---- admin moderation (UI/UX §7.5) ---- */
+.comment-filters input[type="date"] { flex: 0 0 auto; min-width: 150px }
+.comment-filters label:not(.visually-hidden) { font-size: 14px; color: var(--muted) }
+.filter-scope { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin: 0; font-size: 14px }
+.comment-table .comment-cell { min-width: 260px; max-width: 420px }
+.comment-snippet { margin: 0 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden }
+.comment-table .link-button { padding: 0; text-align: left; overflow-wrap: anywhere }
+.block { display: block }
+.comment-quote { max-height: 160px; overflow: auto; margin: 8px 0; padding: 8px 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); background: var(--bg); border-left: 3px solid var(--border); border-radius: 6px }
+
+@media (max-width: 767px) {
+  .comments { padding: 20px 16px 24px; border-radius: 12px }
+  .comment-replies { padding-left: 10px }
+  .comment-replies .comment { grid-template-columns: 26px minmax(0, 1fr); gap: 8px }
+  .comment-replies .comment-avatar { width: 26px; height: 26px }
+  .account-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px 16px 40px }
+  .account-nav { position: static; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px }
+  .account-who { display: none }
+  .account-card { padding: 18px 16px }
+}

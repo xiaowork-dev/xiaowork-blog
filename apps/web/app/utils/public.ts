@@ -162,6 +162,14 @@ export function isoDay(iso: string): string {
   return isoFormat.format(new Date(iso))
 }
 
+const timeFormat = new Intl.DateTimeFormat('zh-CN', { timeZone: SITE_TIME_ZONE, hour: '2-digit', minute: '2-digit', hour12: false })
+
+/** "2026年10月22日 09:05" in the site time zone (comments, admin tables). */
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  return `${dayFormat.format(d)} ${timeFormat.format(d)}`
+}
+
 /** Only https:, mailto: and site-relative links are rendered as profile/nav links (API-DD §5.8). */
 export function safeExternalUrl(url: string): boolean {
   return /^https:\/\/\S+$/i.test(url) || /^mailto:\S+$/i.test(url)

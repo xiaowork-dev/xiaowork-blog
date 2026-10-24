@@ -242,15 +242,19 @@ func TestSearchChineseSamples(t *testing.T) {
 func TestSearchRateLimit(t *testing.T) {
 	h := newHarness(t)
 	anon := h.anon()
-	for i := 0; i < 60; i++ {
-		if r := anon.get("/api/v1/search/articles?q=x"); r.Status != 200 {
-			t.Fatalf("request %d: %d", i, r.Status)
+	// The limiter uses fixed one-minute windows (P2), so a run that crosses a window boundary may see up to
+	// two windows' worth of requests before the first 429.
+	ok := 0
+	var r response
+	for ok <= 120 {
+		if r = anon.get("/api/v1/search/articles?q=x"); r.Status != 200 {
+			break
 		}
+		ok++
 	}
-	r := anon.get("/api/v1/search/articles?q=x")
 	expect(t, r, 429, "RATE_LIMITED")
-	if r.Header.Get("Retry-After") == "" {
-		t.Fatal("missing Retry-After")
+	if ok < 60 || ok > 120 || r.Header.Get("Retry-After") == "" {
+		t.Fatalf("429 after %d requests, Retry-After %q", ok, r.Header.Get("Retry-After"))
 	}
 }
 

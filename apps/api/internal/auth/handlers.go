@@ -47,6 +47,7 @@ func (s *Service) Routes(r chi.Router) {
 		r.Post("/auth/logout", s.handle(s.logout))
 		r.Post("/auth/logout-all", s.handle(s.logoutAll))
 		r.Get("/auth/me", s.handle(s.me))
+		r.Patch("/me/profile", s.handle(s.updateProfile))
 		r.Post("/me/change-password", s.handle(s.changePassword))
 		r.Post("/me/change-email/request", s.handle(s.requestEmailChange))
 		r.Post("/me/change-email/confirm", s.handle(s.confirmEmailChange))
@@ -367,7 +368,7 @@ func (s *Service) me(w http.ResponseWriter, r *http.Request) error {
 	}
 	httpx.WriteData(w, http.StatusOK, map[string]any{
 		"id": u.ID, "email": u.Email, "nickname": u.Nickname, "avatar_url": avatar, "role": u.Role,
-		"email_verified": u.EmailVerified, "status": u.Status, "created_at": u.CreatedAt.UTC(),
+		"email_verified": u.EmailVerified, "status": u.Status, "created_at": u.CreatedAt.UTC(), "bio": u.Bio,
 	})
 	return nil
 }

@@ -233,7 +233,7 @@ log(html.includes('"@type":"BlogPosting"'), 'JSON-LD BlogPosting present')
 log(html.includes('以上就是本文的全部内容') && html.includes('<h2 id="项目背景">') && html.includes('class="toc-side"') && html.includes('href="#技术选型"'), 'SSR body is indexable, headings have anchors, TOC rendered')
 log(html.includes('class="code-copy"') && html.includes('class="shiki') && html.includes('class="md-table"') && /<img[^>]*loading="lazy"/.test(html), 'code highlight + copy button, table wrapper, lazy images')
 log(html.includes(`/tags/go-${run}`) && html.includes('rel="prev"') && html.includes('次阅读'), 'tags, previous-article link and view count shown')
-log(!/评论/.test(html.slice(html.indexOf('class="post-footer"'))), 'no comment section yet (P6)')
+log(html.includes('id="comments"') && !html.includes('class="comment-thread"'), 'comment section present; comments load in the browser (nothing pre-rendered or faked by SSR)')
 
 // ---- old slug 301, private content 404 ----
 const sp = ids[10]

@@ -6,7 +6,7 @@ const privatePage = { 'cache-control': 'private, no-store', 'x-robots-tag': 'noi
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-01',
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css', '~/assets/css/articles.css', '~/assets/css/blog.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/articles.css', '~/assets/css/blog.css', '~/assets/css/community.css'],
   runtimeConfig: {
     // Server-only: where Nitro reaches the Go API (Docker network). Override with NUXT_API_INTERNAL_URL.
     apiInternalUrl: 'http://127.0.0.1:8080',

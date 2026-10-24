@@ -1,6 +1,6 @@
 # XiaoWork Blog
 
-> **当前状态：P5 博客前台与内容发现已完成（2026-10-23）**：公开前台（首页、文章详情、分类、标签、归档、搜索、关于页）、SEO（title/description/canonical/Open Graph、sitemap.xml、rss.xml、robots.txt、旧 Slug 301）、浅色/深色/跟随系统主题与浏览量统计已上线，后台 Markdown 编辑与发布沿用 P4。评论（P6）、后台完善（P7）与生产部署（P8）尚未实现。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
+> **当前状态：P6 评论系统与用户中心已完成（2026-10-24）**：在 P5 博客前台之上，提供文章评论与楼中楼回复（登录且邮箱已验证即可发表，立即公开，无审核队列）、用户中心（资料与头像、修改密码、更换邮箱、退出设备、我的评论）以及后台评论治理（隐藏/恢复/删除）。后台完善（P7）与生产部署（P8）尚未实现。代码托管于 `https://github.com/xiaowork-dev/xiaowork-blog`（`main`），CI 为 GitHub Actions `ci`；尚未部署 VPS。各阶段详情见 `docs/handoffs/`。
 
 ## 目录
 
@@ -16,10 +16,12 @@ apps/api/internal/auth/       注册、验证、登录、会话、CSRF、限流�
 apps/api/internal/media/      图片校验、缩略图、本地存储、媒体 API、删除状态机、一致性检查
 apps/api/internal/article/    文章草稿、发布事务、Slug、撤回/回收站、分类标签、公开列表/搜索/归档/浏览量
 apps/api/internal/site/       公开站点资料（/site）与关于页（/pages/about）
+apps/api/internal/comment/    评论读取/发表/回复/删除、我的评论、后台评论治理
 scripts/e2e-auth.mjs          认证端到端自检
 scripts/e2e-media.mjs         媒体端到端自检（含容器重建后持久化校验）
 scripts/e2e-articles.mjs      文章端到端自检（草稿隔离、发布、旧 Slug 301、XSS、撤回/回收站）
 scripts/e2e-public.mjs        前台端到端自检（分页、分类标签归档、中文搜索、SEO、sitemap/RSS、浏览量）
+scripts/e2e-comments.mjs      评论、用户中心与评论治理端到端自检（真实注册并通过 Mailpit 验证）
 compose.yaml                  db / migrate（一次性）/ api / web / mailpit（本地邮件）、健康检查
 .data/media/                  宿主机本地媒体持久化（运行时创建，不纳入 Git）
 docs/reference/               需求、架构、数据库、API、UI 规范
@@ -111,7 +113,7 @@ cd apps/api && TEST_DATABASE_URL="postgres://postgres@127.0.0.1:55432/postgres?s
 
 ## 验收门槛
 
-参见 `docs/handoffs/` 下各阶段交付记录（P0–P5）。
+参见 `docs/handoffs/` 下各阶段交付记录（P0–P6）。
 
 ## 图片与媒体（P3）
 
@@ -146,3 +148,11 @@ docker compose --env-file .env run --rm -T --no-deps --entrypoint /usr/local/bin
 - `/sitemap.xml`、`/rss.xml`、`/robots.txt` 每次请求都读取公开 API，发布或撤回后立即生效。站点地址取自 `PUBLIC_BASE_URL`（compose 中传给 Nuxt 的 `NUXT_PUBLIC_SITE_URL`），上线时必须设置为正式的 HTTPS 域名。
 - 日期显示与归档统一使用 `Asia/Shanghai` 时区。
 - 前台端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-public.mjs`（测试文章最后留在回收站）。加 `--seed FILE` 可保留一组示例文章用于人工检查，之后用 `--cleanup FILE` 移入回收站。
+
+## 评论与用户中心（P6）
+
+- 文章页底部的评论区在浏览器端加载。游客可以阅读；登录且邮箱已验证的用户可以评论和回复，发表后**立即公开**（不设审核）。评论只支持纯文本、换行、Emoji 和链接，长度不超过 2000 字；每人每分钟最多 5 条、每小时最多 20 条。
+- 回复保存真实的父评论，界面只显示两级缩进，并标注“回复 @昵称”。删除有回复的评论时保留“该评论已删除”的占位；没有回复的评论删除后直接消失。文章关闭评论后仍可阅读历史评论，但不能再发表。
+- 用户中心：`/account/profile`（昵称、简介、头像、邮箱状态）、`/account/security`（修改密码后需重新登录、更换邮箱需在已登录状态下打开确认邮件、退出当前或所有设备）、`/account/comments`（我的评论）。
+- 后台 `/admin/comments`：按文章、用户、状态、日期和关键词筛选，可以隐藏、恢复或删除（删除不可恢复）；所有操作都写入审计日志。
+- 评论端到端自检：`E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… node scripts/e2e-comments.mjs http://127.0.0.1:3000 http://127.0.0.1:8025`（需要 Mailpit）。设计取舍见 `docs/adr/ADR-0006-P6评论与用户中心实现决策.md`。

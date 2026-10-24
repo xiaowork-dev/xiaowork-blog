@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/article"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/comment"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/config"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/httpapi"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/mail"
@@ -67,7 +68,8 @@ func main() {
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			Ping: db.Ping, Auth: authService, Media: mediaService, Articles: articleService, Site: site.NewService(db), Logger: logger,
+			Ping: db.Ping, Auth: authService, Media: mediaService, Articles: articleService, Site: site.NewService(db),
+			Comments: comment.NewService(db, authService, logger), Logger: logger,
 		}),
 		// Body/response deadlines are set per request (httpx.Deadlines) so uploads and downloads can extend them.
 		ReadHeaderTimeout: 5 * time.Second,

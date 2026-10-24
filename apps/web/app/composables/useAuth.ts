@@ -7,6 +7,7 @@ export interface CurrentUser {
   email_verified: boolean
   status: string
   created_at: string
+  bio: string
 }
 
 /**

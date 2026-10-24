@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/article"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/comment"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/config"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/httpapi"
 	xmail "github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/mail"
@@ -58,7 +59,10 @@ func newHarness(t *testing.T) *harness {
 		Root: root, Media: media.Limits{MaxBytes: 2 << 20, MaxPixels: 20_000_000}, Avatar: media.Limits{MaxBytes: 1 << 20, MaxPixels: 4_000_000},
 	}, logger)
 	articles := article.NewService(h.pool, "127.0.0.1:3000", authSvc, logger)
-	h.srv = httptest.NewServer(httpapi.NewRouter(httpapi.Deps{Ping: h.pool.Ping, Auth: authSvc, Media: mediaSvc, Articles: articles, Site: site.NewService(h.pool), Logger: logger}))
+	h.srv = httptest.NewServer(httpapi.NewRouter(httpapi.Deps{
+		Ping: h.pool.Ping, Auth: authSvc, Media: mediaSvc, Articles: articles, Site: site.NewService(h.pool),
+		Comments: comment.NewService(h.pool, authSvc, logger), Logger: logger,
+	}))
 	t.Cleanup(h.srv.Close)
 	return h
 }
@@ -73,10 +77,16 @@ type client struct {
 
 func (h *harness) user(role string) *client {
 	h.t.Helper()
+	return h.account(role, "tester", true, "ACTIVE")
+}
+
+// account creates a signed-in user with the given verification state and account status.
+func (h *harness) account(role, nickname string, verified bool, status string) *client {
+	h.t.Helper()
 	id := uuid.New()
 	email := id.String()[:8] + "@example.test"
-	h.exec(`INSERT INTO users (id, email, email_normalized, password_hash, nickname, role, email_verified_at)
-		VALUES ($1, $2, $2, 'x', 'tester', $3, now())`, id, email, role)
+	h.exec(`INSERT INTO users (id, email, email_normalized, password_hash, nickname, role, status, email_verified_at)
+		VALUES ($1, $2, $2, 'x', $3, $4, $5, CASE WHEN $6::boolean THEN now() END)`, id, email, nickname, role, status, verified)
 	h.exec(`INSERT INTO user_profiles (user_id) VALUES ($1)`, id)
 	raw := "session-" + id.String()
 	sum := sha256.Sum256([]byte(raw))

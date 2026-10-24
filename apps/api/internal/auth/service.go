@@ -102,6 +102,7 @@ type CurrentUser struct {
 	Status        string
 	EmailVerified bool
 	AvatarMediaID uuid.NullUUID
+	Bio           string
 	CreatedAt     time.Time
 }
 
@@ -143,7 +144,7 @@ func (s *Service) Authenticate(next http.Handler) http.Handler {
 				st.user = &CurrentUser{
 					SessionID: row.SessionID, ID: row.UserID, Email: row.Email, Nickname: row.Nickname,
 					Role: row.Role, Status: row.Status, EmailVerified: row.EmailVerifiedAt.Valid,
-					AvatarMediaID: row.AvatarMediaID, CreatedAt: row.UserCreatedAt,
+					AvatarMediaID: row.AvatarMediaID, Bio: row.Bio.String, CreatedAt: row.UserCreatedAt,
 				}
 				if err := s.q.TouchSession(r.Context(), row.SessionID); err != nil {
 					httpx.LoggerFrom(r.Context()).Warn("session touch failed", "error", err.Error())

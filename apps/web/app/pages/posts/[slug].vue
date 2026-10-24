@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Article page (UI/UX §4.2): only the public snapshot of GET /api/v1/articles/{slug}. Old slugs answer
-// an HTTP 301 from SSR; drafts, withdrawn and trashed articles are a 404. Comments arrive in P6.
+// an HTTP 301 from SSR; drafts, withdrawn and trashed articles are a 404. Comments (P6) are loaded in
+// the browser by <CommentSection>, so the article HTML is the same for every reader.
 import { useDocumentRenderer } from '~/composables/useMarkdown'
 import { formatDay, isoDay, type PublicArticle } from '~/utils/public'
 import type { TocEntry } from '~/utils/markdown'
@@ -155,46 +156,49 @@ useHead(() => {
   </div>
   <div v-else-if="article" class="post-layout" :class="{ 'has-toc': rendered.toc.length > 1 }">
     <div class="reading-progress" aria-hidden="true"><span :style="{ transform: `scaleX(${progress})` }" /></div>
-    <article class="post-article" aria-labelledby="post-title">
-      <header class="post-header">
-        <nav class="breadcrumb" aria-label="面包屑">
-          <NuxtLink to="/">首页</NuxtLink><span aria-hidden="true">/</span>
-          <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`">{{ article.category.name }}</NuxtLink>
-          <span v-else>未分类</span>
-        </nav>
-        <h1 id="post-title" class="post-title">{{ article.title }}</h1>
-        <p v-if="article.summary" class="post-summary">{{ article.summary }}</p>
-        <div class="post-meta">
-          <span><SiteIcon name="calendar" :size="15" />发布于 <time :datetime="article.first_published_at">{{ formatDay(article.first_published_at) }}</time></span>
-          <span v-if="updatedLater">更新于 <time :datetime="article.public_updated_at">{{ formatDay(article.public_updated_at) }}</time></span>
-          <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`"><SiteIcon name="folder" :size="15" />{{ article.category.name }}</NuxtLink>
-          <span :aria-label="`阅读 ${article.view_count} 次`"><SiteIcon name="eye" :size="15" />{{ article.view_count }} 次阅读</span>
-        </div>
-        <img v-if="article.cover" :src="article.cover.url" alt="" class="post-cover" decoding="async">
-      </header>
+    <div class="post-main">
+      <article class="post-article" aria-labelledby="post-title">
+        <header class="post-header">
+          <nav class="breadcrumb" aria-label="面包屑">
+            <NuxtLink to="/">首页</NuxtLink><span aria-hidden="true">/</span>
+            <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`">{{ article.category.name }}</NuxtLink>
+            <span v-else>未分类</span>
+          </nav>
+          <h1 id="post-title" class="post-title">{{ article.title }}</h1>
+          <p v-if="article.summary" class="post-summary">{{ article.summary }}</p>
+          <div class="post-meta">
+            <span><SiteIcon name="calendar" :size="15" />发布于 <time :datetime="article.first_published_at">{{ formatDay(article.first_published_at) }}</time></span>
+            <span v-if="updatedLater">更新于 <time :datetime="article.public_updated_at">{{ formatDay(article.public_updated_at) }}</time></span>
+            <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`"><SiteIcon name="folder" :size="15" />{{ article.category.name }}</NuxtLink>
+            <span :aria-label="`阅读 ${article.view_count} 次`"><SiteIcon name="eye" :size="15" />{{ article.view_count }} 次阅读</span>
+          </div>
+          <img v-if="article.cover" :src="article.cover.url" alt="" class="post-cover" decoding="async">
+        </header>
 
-      <details v-if="rendered.toc.length > 1" class="toc-inline">
-        <summary><SiteIcon name="list" :size="16" />目录</summary>
-        <ArticleToc :toc="rendered.toc" :active-id="activeId" />
-      </details>
+        <details v-if="rendered.toc.length > 1" class="toc-inline">
+          <summary><SiteIcon name="list" :size="16" />目录</summary>
+          <ArticleToc :toc="rendered.toc" :active-id="activeId" />
+        </details>
 
-      <div ref="body" class="md-body post-body" v-html="rendered.html" />
+        <div ref="body" class="md-body post-body" v-html="rendered.html" />
 
-      <footer class="post-footer">
-        <ul v-if="article.tags.length" class="tag-list" aria-label="文章标签">
-          <li v-for="t in article.tags" :key="t.id"><NuxtLink :to="`/tags/${t.slug}`" class="tag-pill">#{{ t.name }}</NuxtLink></li>
-        </ul>
-        <nav class="post-neighbours" aria-label="上一篇和下一篇">
-          <NuxtLink v-if="article.previous_article" :to="article.previous_article.canonical_path" class="neighbour prev" rel="prev">
-            <span class="neighbour-label">上一篇</span><span class="neighbour-title">{{ article.previous_article.title }}</span>
-          </NuxtLink>
-          <span v-else class="neighbour placeholder" />
-          <NuxtLink v-if="article.next_article" :to="article.next_article.canonical_path" class="neighbour next" rel="next">
-            <span class="neighbour-label">下一篇</span><span class="neighbour-title">{{ article.next_article.title }}</span>
-          </NuxtLink>
-        </nav>
-      </footer>
-    </article>
+        <footer class="post-footer">
+          <ul v-if="article.tags.length" class="tag-list" aria-label="文章标签">
+            <li v-for="t in article.tags" :key="t.id"><NuxtLink :to="`/tags/${t.slug}`" class="tag-pill">#{{ t.name }}</NuxtLink></li>
+          </ul>
+          <nav class="post-neighbours" aria-label="上一篇和下一篇">
+            <NuxtLink v-if="article.previous_article" :to="article.previous_article.canonical_path" class="neighbour prev" rel="prev">
+              <span class="neighbour-label">上一篇</span><span class="neighbour-title">{{ article.previous_article.title }}</span>
+            </NuxtLink>
+            <span v-else class="neighbour placeholder" />
+            <NuxtLink v-if="article.next_article" :to="article.next_article.canonical_path" class="neighbour next" rel="next">
+              <span class="neighbour-label">下一篇</span><span class="neighbour-title">{{ article.next_article.title }}</span>
+            </NuxtLink>
+          </nav>
+        </footer>
+      </article>
+      <CommentSection :article-id="article.id" :comments-enabled="article.comments_enabled" />
+    </div>
 
     <aside v-if="rendered.toc.length > 1" class="toc-side" aria-label="文章目录">
       <p class="toc-title">目录</p>

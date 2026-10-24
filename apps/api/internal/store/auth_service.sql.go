@@ -104,7 +104,7 @@ const getSessionWithUser = `-- name: GetSessionWithUser :one
 SELECT s.id AS session_id,
        (s.revoked_at IS NULL AND s.expires_at > now())::boolean AS is_valid,
        u.id AS user_id, u.email, u.nickname, u.role, u.status, u.email_verified_at, u.created_at AS user_created_at,
-       p.avatar_media_id
+       p.avatar_media_id, p.bio
 FROM auth_sessions s
 JOIN users u ON u.id = s.user_id
 LEFT JOIN user_profiles p ON p.user_id = u.id
@@ -122,6 +122,7 @@ type GetSessionWithUserRow struct {
 	EmailVerifiedAt pgtype.Timestamptz
 	UserCreatedAt   time.Time
 	AvatarMediaID   uuid.NullUUID
+	Bio             pgtype.Text
 }
 
 // Session lookup that still returns expired/revoked rows so the API can tell
@@ -140,6 +141,7 @@ func (q *Queries) GetSessionWithUser(ctx context.Context, tokenDigest []byte) (G
 		&i.EmailVerifiedAt,
 		&i.UserCreatedAt,
 		&i.AvatarMediaID,
+		&i.Bio,
 	)
 	return i, err
 }

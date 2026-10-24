@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/article"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/auth"
+	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/comment"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/media"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/platform/httpx"
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/site"
@@ -24,6 +25,7 @@ type Deps struct {
 	Media    *media.Service
 	Articles *article.Service
 	Site     *site.Service
+	Comments *comment.Service
 	Logger   *slog.Logger
 }
 
@@ -43,7 +45,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.MethodNotAllowed(httpx.MethodNotAllowed)
 
 	r.Get("/health/live", func(w http.ResponseWriter, req *http.Request) {
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P5"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ok", "stage": "P6"})
 	})
 	r.Get("/health/ready", func(w http.ResponseWriter, req *http.Request) {
 		ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
@@ -52,7 +54,7 @@ func NewRouter(d Deps) *chi.Mux {
 			writeHealth(w, http.StatusServiceUnavailable, map[string]any{"status": "unavailable"})
 			return
 		}
-		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P5"})
+		writeHealth(w, http.StatusOK, map[string]any{"status": "ready", "stage": "P6"})
 	})
 
 	if d.Auth == nil {
@@ -81,6 +83,9 @@ func NewRouter(d Deps) *chi.Mux {
 			if d.Site != nil {
 				d.Site.PublicRoutes(json)
 			}
+			if d.Comments != nil {
+				d.Comments.Routes(json)
+			}
 		})
 		// Every /admin path is guarded before routing, so non-admins get 401/403 and never learn which
 		// admin endpoints exist. Further admin features arrive in P4–P7.
@@ -93,6 +98,12 @@ func NewRouter(d Deps) *chi.Mux {
 				admin.Group(func(json chi.Router) {
 					json.Use(middleware.Timeout(15 * time.Second))
 					d.Articles.AdminRoutes(json)
+				})
+			}
+			if d.Comments != nil {
+				admin.Group(func(json chi.Router) {
+					json.Use(middleware.Timeout(15 * time.Second))
+					d.Comments.AdminRoutes(json)
 				})
 			}
 			admin.HandleFunc("/*", httpx.NotFound)
