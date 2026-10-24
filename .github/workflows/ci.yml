@@ -164,7 +164,7 @@ jobs:
             -e 's|^PROXY_NETWORK=.*|PROXY_NETWORK=npm_proxy|' deploy/.env
           sudo deploy/install.sh
           sudo deploy/install.sh | tee "$RUNNER_TEMP/again.log"
-          grep -q 'deploy/update.sh' "$RUNNER_TEMP/again.log"
+          grep -q '无需重复安装' "$RUNNER_TEMP/again.log"
           sudo deploy/admin.sh status
           test -z "$(docker ps --format '{{.Names}} {{.Ports}}' | grep '^xiaowork-blog' | grep -F '0.0.0.0')"
       - name: HTTPS through the proxy, admin bootstrap and auth e2e
