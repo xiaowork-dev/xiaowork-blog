@@ -25,7 +25,7 @@ defineEmits<{ retry: [] }>()
   </StateBlock>
   <template v-else>
     <div class="article-list">
-      <ArticleCard v-for="a in articles" :key="a.id" :article="a" :highlight="highlight" />
+      <ArticleCard v-for="(a, i) in articles" :key="a.id" :article="a" :highlight="highlight" :priority="i < 2" />
     </div>
     <PagerNav :page="page" :total-pages="totalPages" :query="query" />
   </template>

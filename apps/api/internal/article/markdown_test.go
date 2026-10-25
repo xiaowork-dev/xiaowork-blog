@@ -2,6 +2,7 @@ package article
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -35,6 +36,28 @@ func TestPlainTextAndSummary(t *testing.T) {
 	}
 	if s := autoSummary(long); len([]rune(s)) != summaryRunes+1 || s[len(s)-len("…"):] != "…" {
 		t.Fatalf("summary = %q", s)
+	}
+}
+
+func TestSummaryTextSkipsNoise(t *testing.T) {
+	src := "```bash\nsudo git clone https://github.com/x/y.git /opt/y\n```\n\n" +
+		"| 字段 | 说明 |\n|---|---|\n| a | b |\n\n" +
+		"![示意图](/media/0b6e1c9e-0000-4000-8000-000000000000/file)\n\n" +
+		"参考：https://example.test/a/very/long/path/that/should/not/appear/in/the/summary?q=1\n\n" +
+		"(见 https://example.test/another/long/path/inside/parentheses/that/is/not/linkified)\n\n" +
+		"<div>raw</div>\n\n" +
+		"## 小节\n\n真正的第一段，含 `行内代码` 与[链接文字](https://x.y)。\n\n    indented code\n"
+	got := summaryText(src)
+	want := "(见) 小节 真正的第一段，含 行内代码 与链接文字。"
+	if got != want {
+		t.Fatalf("summaryText = %q\nwant          %q", got, want)
+	}
+	// Search still sees the code (plainText is unchanged).
+	if p := plainText(src); !strings.Contains(p, "sudo git clone") {
+		t.Fatalf("plainText lost the code: %q", p)
+	}
+	if s := summaryText("```go\nfmt.Println(1)\n```"); s != "" {
+		t.Fatalf("code-only article summary = %q, want empty", s)
 	}
 }
 

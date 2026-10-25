@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TermWithCount } from '~/utils/public'
+import { tagTone, type TermWithCount } from '~/utils/public'
 
 definePageMeta({ layout: 'blog' })
 
@@ -21,7 +21,7 @@ usePageSeo(() => ({ title: `标签 · ${site.value.site_title}`, description: `$
     </StateBlock>
     <ul v-else class="tag-cloud">
       <li v-for="t in data" :key="t.id">
-        <NuxtLink :to="`/tags/${t.slug}`" class="tag-pill tag-pill-large">#{{ t.name }} <span class="tag-count">{{ t.article_count }}</span></NuxtLink>
+        <NuxtLink :to="`/tags/${t.slug}`" class="tag-pill tag-pill-large" :class="`tone-${tagTone(t.slug)}`">#{{ t.name }} <span class="tag-count">{{ t.article_count }}</span></NuxtLink>
       </li>
     </ul>
   </section>

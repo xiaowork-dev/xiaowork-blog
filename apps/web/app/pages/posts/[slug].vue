@@ -3,7 +3,7 @@
 // an HTTP 301 from SSR; drafts, withdrawn and trashed articles are a 404. Comments (P6) are loaded in
 // the browser by <CommentSection>, so the article HTML is the same for every reader.
 import { useDocumentRenderer } from '~/composables/useMarkdown'
-import { formatDay, isoDay, type PublicArticle } from '~/utils/public'
+import { formatDay, isoDay, tagTone, type PublicArticle } from '~/utils/public'
 import type { TocEntry } from '~/utils/markdown'
 
 definePageMeta({ layout: 'blog' })
@@ -26,6 +26,7 @@ if (article.value?.resolved_from_old_slug) {
 const renderDoc = await useDocumentRenderer()
 const rendered = computed(() => (article.value ? renderDoc(article.value.body_markdown) : { html: '', toc: [] as TocEntry[] }))
 const updatedLater = computed(() => !!article.value && isoDay(article.value.public_updated_at) !== isoDay(article.value.first_published_at))
+const showCover = computed(() => !!article.value?.cover && !article.value.body_markdown.includes(article.value.cover.url))
 
 // ---- reading aids: TOC highlight, progress bar, back to top, image zoom, code copy ----
 const body = ref<HTMLElement | null>(null)
@@ -165,14 +166,15 @@ useHead(() => {
             <span v-else>未分类</span>
           </nav>
           <h1 id="post-title" class="post-title">{{ article.title }}</h1>
-          <p v-if="article.summary" class="post-summary">{{ article.summary }}</p>
           <div class="post-meta">
+            <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`" class="card-category">{{ article.category.name }}</NuxtLink>
             <span><SiteIcon name="calendar" :size="15" />发布于 <time :datetime="article.first_published_at">{{ formatDay(article.first_published_at) }}</time></span>
             <span v-if="updatedLater">更新于 <time :datetime="article.public_updated_at">{{ formatDay(article.public_updated_at) }}</time></span>
-            <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`"><SiteIcon name="folder" :size="15" />{{ article.category.name }}</NuxtLink>
             <span :aria-label="`阅读 ${article.view_count} 次`"><SiteIcon name="eye" :size="15" />{{ article.view_count }} 次阅读</span>
           </div>
-          <img v-if="article.cover" :src="article.cover.url" alt="" class="post-cover" decoding="async">
+          <p v-if="article.summary" class="post-summary">{{ article.summary }}</p>
+          <!-- Header image; skipped when the body already shows the same picture, so it never appears twice. -->
+          <img v-if="showCover" :src="article.cover!.url" alt="" class="post-cover" width="1280" height="720" decoding="async" fetchpriority="high">
         </header>
 
         <details v-if="rendered.toc.length > 1" class="toc-inline">
@@ -184,7 +186,7 @@ useHead(() => {
 
         <footer class="post-footer">
           <ul v-if="article.tags.length" class="tag-list" aria-label="文章标签">
-            <li v-for="t in article.tags" :key="t.id"><NuxtLink :to="`/tags/${t.slug}`" class="tag-pill">#{{ t.name }}</NuxtLink></li>
+            <li v-for="t in article.tags" :key="t.id"><NuxtLink :to="`/tags/${t.slug}`" class="tag-pill" :class="`tone-${tagTone(t.slug)}`">#{{ t.name }}</NuxtLink></li>
           </ul>
           <nav class="post-neighbours" aria-label="上一篇和下一篇">
             <NuxtLink v-if="article.previous_article" :to="article.previous_article.canonical_path" class="neighbour prev" rel="prev">

@@ -613,7 +613,7 @@ func (s *Service) publish(w http.ResponseWriter, r *http.Request) error {
 		plain := plainText(d.BodyMarkdown)
 		now := time.Now().UTC().Truncate(time.Microsecond)
 		if _, err := q.UpsertPublicationFromDraft(ctx, store.UpsertPublicationFromDraftParams{
-			FallbackSummary: autoSummary(plain), BodyPlainText: plain, Slug: slug, PublishedAt: now, ArticleID: id,
+			FallbackSummary: autoSummary(summaryText(d.BodyMarkdown)), BodyPlainText: plain, Slug: slug, PublishedAt: now, ArticleID: id,
 		}); err != nil {
 			return err
 		}

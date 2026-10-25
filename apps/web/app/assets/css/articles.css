@@ -39,18 +39,21 @@
 .ws-save { font-size: 13px; color: var(--muted); white-space: nowrap }
 .save-saving, .save-dirty { color: var(--warning) }
 .save-error, .save-conflict { color: var(--error); font-weight: 600 }
-.ws-modes { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden }
-.ws-modes button { padding: 6px 12px; font: inherit; font-size: 14px; color: var(--text); background: var(--card); border: 0; cursor: pointer }
-.ws-modes button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600 }
+.ws-modes { display: inline-flex; gap: 2px; padding: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px }
+.ws-modes button { min-height: 30px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--muted); background: transparent; border: 0; border-radius: 7px; cursor: pointer }
+.ws-modes button:hover { color: var(--text) }
+.ws-modes button[aria-pressed="true"] { background: var(--card); color: var(--accent); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, .12), 0 0 0 1px var(--accent-border) }
 .ws-banner { margin: 8px 16px 0 }
 .ws-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) }
 .ws-body.with-settings { grid-template-columns: minmax(0, 1fr) 340px }
 .ws-panes { min-height: 0; display: grid }
 .ws-panes.mode-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
 .ws-source { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border) }
-.md-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--border); background: var(--card) }
-.md-toolbar button { min-width: 32px; min-height: 32px; padding: 0 8px; font: inherit; font-size: 13px; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 6px; cursor: pointer }
-.md-toolbar button:hover:not(:disabled) { background: var(--bg); border-color: var(--border) }
+.md-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; padding: 6px 8px; border-bottom: 1px solid var(--border); background: var(--card) }
+.md-toolbar button { min-width: 30px; min-height: 32px; padding: 0 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 7px; cursor: pointer }
+.md-toolbar button:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-border) }
+.md-toolbar button:disabled { opacity: .45; cursor: not-allowed }
+.md-toolbar-divider { width: 1px; height: 18px; margin: 0 4px; background: var(--border) }
 .md-toolbar-sep { flex: 1 }
 .md-editor { flex: 1; min-height: 0; overflow: auto; background: var(--card) }
 .md-editor .cm-editor { height: 100%; font-size: 15px }
@@ -58,8 +61,13 @@
 .md-editor .cm-scroller { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Microsoft YaHei Mono", monospace; line-height: 1.7 }
 .md-editor .cm-content { color: var(--text); caret-color: var(--accent) }
 .md-editor .cm-gutters { background: var(--card); color: var(--muted); border-right: 1px solid var(--border) }
+.md-editor .cm-activeLine { background: color-mix(in srgb, var(--accent) 6%, transparent) }
+.md-editor .cm-activeLineGutter { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text) }
+.md-editor .cm-selectionBackground, .md-editor .cm-focused .cm-selectionBackground { background: color-mix(in srgb, var(--accent) 24%, transparent) !important }
+.md-editor .cm-cursor { border-left-color: var(--accent) }
 .md-editor-loading { padding: 16px; color: var(--muted) }
-.ws-preview { min-height: 0; overflow: auto; padding: 24px 32px; background: var(--card) }
+.ws-preview { min-height: 0; overflow: auto; padding: 28px 36px 48px; background: var(--card) }
+.ws-preview > * { max-width: 760px; margin-left: auto; margin-right: auto }
 .preview-title { margin-top: 0 }
 .ws-settings { min-height: 0; overflow: auto; padding: 16px; border-left: 1px solid var(--border); background: var(--card) }
 .ws-settings h2 { margin: 0; font-size: 18px }
@@ -88,23 +96,40 @@
 .publish-summary dd { margin: 0; word-break: break-all }
 
 /* ---- Rendered Markdown (editor preview and public page) ---- */
-.md-body { line-height: 1.8; font-size: 16px; color: var(--text); overflow-wrap: anywhere }
-.md-body h1, .md-body h2, .md-body h3 { line-height: 1.35; margin: 1.6em 0 .6em }
-.md-body img { max-width: 100%; height: auto; border-radius: 8px }
-.md-body blockquote { margin: 1em 0; padding: .2em 1em; color: var(--muted); border-left: 4px solid var(--border) }
-.md-body code { padding: .1em .35em; font-size: .9em; background: var(--bg); border-radius: 4px }
-.md-body pre { padding: 14px 16px; overflow-x: auto; border-radius: 10px; background: var(--bg); border: 1px solid var(--border) }
-.md-body pre code { padding: 0; background: none }
-.md-body .shiki, .md-body .shiki span { color: var(--shiki-light); background-color: var(--shiki-light-bg) }
-.md-table { overflow-x: auto; margin: 1em 0 }
-.md-body table { border-collapse: collapse; min-width: 100% }
-.md-body th, .md-body td { padding: 6px 12px; border: 1px solid var(--border); min-width: 4.5em }
-.md-body th { white-space: nowrap }
+/* Typography for Chinese long-form reading (P8-B8): 1.85 line height, calm headings, tinted quotes and code. */
+.md-body { line-height: 1.85; font-size: 16px; color: var(--text); overflow-wrap: anywhere }
+.md-body p, .md-body ul, .md-body ol { margin: 0 0 1.1em }
+.md-body li + li { margin-top: .3em }
+.md-body h1, .md-body h2, .md-body h3, .md-body h4 { line-height: 1.4; margin: 1.8em 0 .7em; letter-spacing: .01em }
+.md-body h2 { font-size: 1.45em; padding-bottom: .35em; border-bottom: 1px solid var(--border) }
+.md-body h3 { font-size: 1.2em }
+.md-body a { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); text-underline-offset: 3px }
+.md-body a:hover { text-decoration-color: currentColor }
+.md-body img { display: block; max-width: 100%; height: auto; margin: 1.4em auto; border-radius: 10px; border: 1px solid var(--border) }
+.md-body hr { margin: 2em 0; border: 0; border-top: 1px solid var(--border) }
+.md-body blockquote {
+  margin: 1.4em 0; padding: .7em 1.1em; color: var(--muted);
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0;
+}
+.md-body blockquote p { margin: .3em 0 }
+.md-body code { padding: .12em .4em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86em; color: var(--violet); background: var(--violet-soft); border-radius: 5px }
+.md-body pre { padding: 14px 18px; overflow-x: auto; border-radius: 12px; background: var(--code-bg); border: 1px solid var(--border); font-size: 14px; line-height: 1.7; tab-size: 4 }
+.md-body pre code { padding: 0; color: inherit; font-size: inherit; background: none }
+.code-block pre { background: transparent }
+/* Shiki colours only; the block background comes from --code-bg so code fits both site themes. */
+.md-body .shiki { background-color: var(--code-bg) !important }
+.md-body .shiki span { color: var(--shiki-light); background-color: transparent }
+.md-table { overflow-x: auto; margin: 1.4em 0; border: 1px solid var(--border); border-radius: 10px }
+.md-body table { border-collapse: collapse; min-width: 100%; font-size: .94em; overflow-wrap: normal }
+.md-body th, .md-body td { padding: 8px 14px; border-bottom: 1px solid var(--border); min-width: 4.5em; text-align: left }
+.md-body tr:last-child td { border-bottom: 0 }
+.md-body th { white-space: nowrap; font-weight: 650; background: var(--bg) }
+.md-body tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg) 55%, transparent) }
 .md-body .task-list-item { list-style: none; margin-left: -1.4em }
 .task-checkbox { margin-right: .4em }
-:root[data-theme="dark"] .md-body .shiki, :root[data-theme="dark"] .md-body .shiki span { color: var(--shiki-dark); background-color: var(--shiki-dark-bg) }
+:root[data-theme="dark"] .md-body .shiki span { color: var(--shiki-dark) }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .md-body .shiki, :root:not([data-theme="light"]) .md-body .shiki span { color: var(--shiki-dark); background-color: var(--shiki-dark-bg) }
+  :root:not([data-theme="light"]) .md-body .shiki span { color: var(--shiki-dark) }
 }
 
 @media (max-width: 1023px) {

@@ -73,21 +73,22 @@ onBeforeRouteLeave(async () => {
 })
 
 // ---- toolbar ----
-const tools: { label: string, title: string, run: () => void }[] = [
-  { label: 'H2', title: '二级标题', run: () => editor.value?.prefixLines('## ') },
-  { label: 'H3', title: '三级标题', run: () => editor.value?.prefixLines('### ') },
-  { label: 'B', title: '加粗 (Ctrl+B)', run: () => editor.value?.wrap('**', '**', '加粗文字') },
-  { label: 'I', title: '斜体 (Ctrl+I)', run: () => editor.value?.wrap('*', '*', '斜体文字') },
-  { label: 'S', title: '删除线', run: () => editor.value?.wrap('~~', '~~', '删除文字') },
-  { label: '“”', title: '引用', run: () => editor.value?.prefixLines('> ') },
-  { label: '•', title: '无序列表', run: () => editor.value?.prefixLines('- ') },
-  { label: '1.', title: '有序列表', run: () => editor.value?.prefixLines(i => `${i + 1}. `) },
-  { label: '☐', title: '任务列表', run: () => editor.value?.prefixLines('- [ ] ') },
-  { label: '`', title: '行内代码 (Ctrl+E)', run: () => editor.value?.wrap('`', '`', 'code') },
-  { label: '{ }', title: '代码块', run: () => editor.value?.insertBlock('```go\n// 代码\n```') },
-  { label: '链接', title: '链接 (Ctrl+K)', run: () => editor.value?.wrap('[', '](https://)', '链接文字') },
-  { label: '表格', title: '表格', run: () => editor.value?.insertBlock('| 列 1 | 列 2 |\n| --- | --- |\n| 内容 | 内容 |') },
-  { label: '—', title: '分隔线', run: () => editor.value?.insertBlock('---') },
+// group: toolbar buttons are drawn in small groups (headings / emphasis / blocks / code / insert), P8-B8.
+const tools: { label: string, title: string, group: number, run: () => void }[] = [
+  { label: 'H2', title: '二级标题', group: 1, run: () => editor.value?.prefixLines('## ') },
+  { label: 'H3', title: '三级标题', group: 1, run: () => editor.value?.prefixLines('### ') },
+  { label: 'B', title: '加粗 (Ctrl+B)', group: 2, run: () => editor.value?.wrap('**', '**', '加粗文字') },
+  { label: 'I', title: '斜体 (Ctrl+I)', group: 2, run: () => editor.value?.wrap('*', '*', '斜体文字') },
+  { label: 'S', title: '删除线', group: 2, run: () => editor.value?.wrap('~~', '~~', '删除文字') },
+  { label: '“”', title: '引用', group: 3, run: () => editor.value?.prefixLines('> ') },
+  { label: '•', title: '无序列表', group: 3, run: () => editor.value?.prefixLines('- ') },
+  { label: '1.', title: '有序列表', group: 3, run: () => editor.value?.prefixLines(i => `${i + 1}. `) },
+  { label: '☐', title: '任务列表', group: 3, run: () => editor.value?.prefixLines('- [ ] ') },
+  { label: '`', title: '行内代码 (Ctrl+E)', group: 4, run: () => editor.value?.wrap('`', '`', 'code') },
+  { label: '{ }', title: '代码块', group: 4, run: () => editor.value?.insertBlock('```go\n// 代码\n```') },
+  { label: '链接', title: '链接 (Ctrl+K)', group: 5, run: () => editor.value?.wrap('[', '](https://)', '链接文字') },
+  { label: '表格', title: '表格', group: 5, run: () => editor.value?.insertBlock('| 列 1 | 列 2 |\n| --- | --- |\n| 内容 | 内容 |') },
+  { label: '—', title: '分隔线', group: 5, run: () => editor.value?.insertBlock('---') },
 ]
 
 function insertImage(m: MediaItem) {
@@ -266,7 +267,10 @@ const trashed = computed(() => detail.value?.status === 'TRASHED')
       <div class="ws-panes" :class="`mode-${mode}`">
         <section v-show="mode !== 'preview'" class="ws-source" aria-label="Markdown 原文">
           <div class="md-toolbar" role="toolbar" aria-label="Markdown 工具栏">
-            <button v-for="t in tools" :key="t.title" type="button" :title="t.title" :aria-label="t.title" :disabled="trashed" @click="t.run">{{ t.label }}</button>
+            <template v-for="(t, i) in tools" :key="t.title">
+              <span v-if="i > 0 && tools[i - 1]!.group !== t.group" class="md-toolbar-divider" aria-hidden="true" />
+              <button type="button" :title="t.title" :aria-label="t.title" :disabled="trashed" @click="t.run">{{ t.label }}</button>
+            </template>
             <button type="button" title="插入图片（也可直接粘贴或拖入图片）" :disabled="trashed" @click="imagePicker?.open()">图片</button>
             <span class="md-toolbar-sep" />
             <button type="button" title="导入 .md 文件" :disabled="trashed" @click="importInput?.click()">导入</button>

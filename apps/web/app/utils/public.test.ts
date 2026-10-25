@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { absoluteUrl, formatDay, highlightParts, isoDay, pageWindow, parsePage, safeExternalUrl, safeInternalPath } from './public'
+import { absoluteUrl, formatDay, highlightParts, isoDay, pageWindow, parsePage, safeExternalUrl, safeInternalPath, tagTone } from './public'
 
 describe('public helpers', () => {
   it('parses page numbers strictly', () => {
@@ -39,5 +39,16 @@ describe('public helpers', () => {
   it('makes absolute URLs on the site origin', () => {
     expect(absoluteUrl('https://blog.example.com', '/posts/a')).toBe('https://blog.example.com/posts/a')
     expect(absoluteUrl('https://blog.example.com/', '/')).toBe('https://blog.example.com/')
+  })
+})
+
+describe('tagTone', () => {
+  it('is stable per slug and stays within the four tones', () => {
+    for (const slug of ['go', 'nuxt', 'docker', 'postgresql', 'self-hosted', '中文', '']) {
+      const t = tagTone(slug)
+      expect(t).toBe(tagTone(slug))
+      expect([0, 1, 2, 3]).toContain(t)
+    }
+    expect(new Set(['go', 'nuxt', 'docker', 'postgresql', 'self-hosted'].map(tagTone)).size).toBeGreaterThan(1)
   })
 })

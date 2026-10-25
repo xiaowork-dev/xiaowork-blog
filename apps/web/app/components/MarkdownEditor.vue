@@ -94,9 +94,23 @@ async function uploadFiles(files: File[], pos?: number) {
 }
 
 onMounted(async () => {
-  const [{ EditorView: View, keymap, placeholder }, { EditorState }, { basicSetup }, { markdown }, { indentWithTab }] = await Promise.all([
+  const [{ EditorView: View, keymap, placeholder }, { EditorState }, { basicSetup }, { markdown }, { indentWithTab }, { HighlightStyle, syntaxHighlighting }, { tags: t }] = await Promise.all([
     import('@codemirror/view'), import('@codemirror/state'), import('codemirror'), import('@codemirror/lang-markdown'),
-    import('@codemirror/commands'),
+    import('@codemirror/commands'), import('@codemirror/language'), import('@lezer/highlight'),
+  ])
+  // Markdown syntax colours from the site tokens (P8-B8), so the source reads well in both themes; the
+  // default CodeMirror style (dark blue / purple on white) was hard to read on the dark background.
+  const markdownStyle = HighlightStyle.define([
+    { tag: t.heading, color: 'var(--text)', fontWeight: '700' },
+    { tag: [t.strong], fontWeight: '700' },
+    { tag: [t.emphasis], fontStyle: 'italic' },
+    { tag: [t.strikethrough], textDecoration: 'line-through' },
+    { tag: [t.link, t.url], color: 'var(--accent)' },
+    { tag: [t.monospace], color: 'var(--violet)' },
+    { tag: [t.quote], color: 'var(--muted)', fontStyle: 'italic' },
+    { tag: [t.list], color: 'var(--teal)' },
+    { tag: [t.processingInstruction, t.meta, t.contentSeparator], color: 'var(--muted)' },
+    { tag: [t.labelName], color: 'var(--amber)' },
   ])
   const run = (fn: () => void) => () => (fn(), true)
   view = new View({
@@ -106,6 +120,7 @@ onMounted(async () => {
       extensions: [
         basicSetup,
         markdown(),
+        syntaxHighlighting(markdownStyle),
         View.lineWrapping,
         EditorState.readOnly.of(Boolean(props.readonly)),
         placeholder('在这里用 Markdown 写正文…'),

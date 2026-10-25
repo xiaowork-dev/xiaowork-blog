@@ -13,6 +13,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
+	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
 )
 
@@ -106,9 +107,60 @@ func plainText(source string) string {
 	return strings.Join(strings.Fields(b.String()), " ")
 }
 
+// summaryText extracts the prose a reader would see first, for the automatic summary (P8-B8). Unlike
+// plainText (search), it leaves out code blocks, tables, images, raw HTML and bare URLs, which read as
+// noise in an article card; inline code and link texts stay because they are part of the sentence.
+func summaryText(source string) string {
+	src := []byte(source)
+	doc := md.Parser().Parse(text.NewReader(src))
+	var b strings.Builder
+	space := func() {
+		if b.Len() > 0 {
+			b.WriteByte(' ')
+		}
+	}
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch n := n.(type) {
+		case *ast.Text:
+			b.Write(n.Segment.Value(src))
+			if n.SoftLineBreak() || n.HardLineBreak() {
+				b.WriteByte(' ')
+			}
+		case *ast.String:
+			b.Write(n.Value)
+		case *ast.FencedCodeBlock, *ast.CodeBlock, *ast.HTMLBlock, *ast.RawHTML, *ast.Image, *ast.AutoLink, *east.Table:
+			return ast.WalkSkipChildren, nil
+		default:
+			if n.Type() == ast.TypeBlock {
+				space()
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+	// Long URLs written as plain text (not linkified, e.g. right after a full-width colon) are noise too.
+	// A short label glued to the URL ("参考：https://…") goes with it.
+	prose := longURL.ReplaceAllStringFunc(b.String(), func(m string) string {
+		if len(m)-strings.IndexAny(m, "hw") > 30 {
+			return " "
+		}
+		return m
+	})
+	prose = strings.Join(strings.Fields(prose), " ")
+	return emptyParens.ReplaceAllString(strings.NewReplacer(" )", ")", " ）", "）").Replace(prose), "")
+}
+
+var (
+	longURL     = regexp.MustCompile(`(?:[^\s:：]{1,8}[:：] ?)?(?:https?://|www\.)[^\s，。；、）)]+`)
+	emptyParens = regexp.MustCompile(` ?(?:\(\)|（）)`)
+)
+
 const summaryRunes = 160
 
-// autoSummary is the fallback public summary when the draft has none (PRD "摘要可以自动生成").
+// autoSummary is the fallback public summary when the draft has none (PRD "摘要可以自动生成"). It is
+// given summaryText, not the search text, so commands in code blocks never end up on the home page.
 func autoSummary(plain string) string {
 	if utf8.RuneCountInString(plain) <= summaryRunes {
 		return plain

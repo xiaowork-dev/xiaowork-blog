@@ -7,11 +7,18 @@ const profile = computed(() => site.value.profile)
 const links = computed(() => site.value.social_links.filter(l => safeExternalUrl(l.url)))
 const initial = computed(() => Array.from(profile.value.name.trim())[0]?.toUpperCase() ?? 'X')
 const knownIcons = ['github', 'mail', 'rss', 'link']
+// A missing avatar file falls back to the initial (also when it failed before hydration).
+const avatarFailed = ref(false)
+const avatarImg = ref<HTMLImageElement | null>(null)
+onMounted(() => {
+  const img = avatarImg.value
+  if (img?.complete && img.naturalWidth === 0) avatarFailed.value = true
+})
 </script>
 
 <template>
   <aside class="profile-card" aria-label="博主信息">
-    <img v-if="profile.avatar" :src="profile.avatar.url" :alt="`${profile.name} 的头像`" class="profile-avatar" width="88" height="88">
+    <img v-if="profile.avatar && !avatarFailed" ref="avatarImg" :src="profile.avatar.url" :alt="`${profile.name} 的头像`" class="profile-avatar" width="92" height="92" @error="avatarFailed = true">
     <span v-else class="profile-avatar profile-avatar-text" aria-hidden="true">{{ initial }}</span>
     <h2 class="profile-name">{{ profile.name }}</h2>
     <p v-if="profile.bio" class="profile-bio">{{ profile.bio }}</p>

@@ -152,6 +152,13 @@ export const SITE_TIME_ZONE = 'Asia/Shanghai'
 const dayFormat = new Intl.DateTimeFormat('zh-CN', { timeZone: SITE_TIME_ZONE, year: 'numeric', month: 'long', day: 'numeric' })
 const isoFormat = new Intl.DateTimeFormat('en-CA', { timeZone: SITE_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' })
 
+/** One of four low-saturation tag tones (accent / teal / amber / violet), stable for a given slug. */
+export function tagTone(slug: string): number {
+  let h = 0
+  for (const ch of slug) h = (h * 31 + ch.codePointAt(0)!) >>> 0
+  return h % 4
+}
+
 /** "2026年10月22日" in the site time zone. */
 export function formatDay(iso: string): string {
   return dayFormat.format(new Date(iso))

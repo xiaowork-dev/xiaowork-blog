@@ -21,6 +21,7 @@ const PATHS: Record<string, string[]> = {
   folder: ['M4 6a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z'],
   tag: ['M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z', 'M7.5 7.5h.01'],
   list: ['M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'],
+  image: ['M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z', 'M9 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z', 'm20 15-5-5-11 11'],
 }
 
 const paths = computed(() => PATHS[props.name] ?? PATHS.link!)
