@@ -2,9 +2,9 @@
 
 一个自托管的个人博客系统：博主在后台用 Markdown 写作和管理网站，读者浏览、搜索、注册并发表评论。使用 Docker 部署在你自己的 Linux 服务器上，由现有的 Nginx Proxy Manager 提供 HTTPS。
 
-> **当前状态：尚未发布正式版本。**
-> - V1.0 的功能已经开发完成，正在准备预发布版 `v1.0.0-rc.1` 并进行生产环境上线验收；验收通过后发布 `v1.0.0`。
-> - 在此之前，`deploy/manage.sh` 找不到可安装的正式版本，这是预期行为。
+> **当前状态：已发布预发布版 [`v1.0.0-rc.1`](https://github.com/xiaowork-dev/xiaowork-blog/releases/tag/v1.0.0-rc.1)，尚未发布正式版本。**
+> - 预发布版用于生产环境上线验收；验收通过后在同一提交上发布正式版 `v1.0.0`。
+> - 在此之前，`deploy/manage.sh` 默认找不到可安装的正式版本，这是预期行为；安装预发布版需要显式指定：`sudo deploy/manage.sh install v1.0.0-rc.1 --pre`。
 > - 本项目以 [MIT 许可证](LICENSE) 开源。
 
 ## 功能
