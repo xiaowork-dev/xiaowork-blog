@@ -317,7 +317,12 @@ cmd_precheck() {
   local args=()
   if [ -f "$ENV_FILE" ] && ( load_env ) >/dev/null 2>&1; then
     load_env
-    args=(--npm-network "$PROXY_NETWORK" --data-dir "$DATA_DIR" --app-subnet "${APP_SUBNET:-172.30.240.0/24}")
+    args=(--proxy-mode "$PROXY_MODE" --data-dir "$DATA_DIR" --app-subnet "${APP_SUBNET:-172.30.240.0/24}")
+    if [ "$PROXY_MODE" = host-loopback ]; then
+      args+=(--web-port "$WEB_HOST_PORT" --api-port "$API_HOST_PORT")
+    else
+      args+=(--npm-network "$PROXY_NETWORK")
+    fi
     local host="${PUBLIC_BASE_URL#https://}"; args+=(--domain "${host%%[:/]*}")
     [ -n "${SMTP_HOST:-}" ] && args+=(--smtp "$SMTP_HOST:${SMTP_PORT:-587}")
   fi

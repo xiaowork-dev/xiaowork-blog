@@ -2,22 +2,28 @@
 # Read-only production host precheck (P8-B1). Changes nothing: it creates no file, directory, container,
 # network or volume, pulls no image and does not enter any container.
 #
-#   sudo bash deploy/precheck.sh [--npm-network NAME] [--data-dir DIR] [--domain blog.example.com]
-#                                [--smtp smtp.example.com:587] [--app-subnet 172.30.240.0/24] > precheck.txt
+#   sudo bash deploy/precheck.sh [--proxy-mode docker-network|host-loopback] [--npm-network NAME]
+#                                [--web-port 13000] [--api-port 18081] [--data-dir DIR]
+#                                [--domain blog.example.com] [--smtp smtp.example.com:587]
+#                                [--app-subnet 172.30.240.0/24] > precheck.txt
 #
 # It prints no secrets: container environments, `docker inspect` dumps and .env files are never shown.
 # Review precheck.txt before sharing it (it lists container names, networks, ports and directories).
 set -uo pipefail
 
 NPM_NETWORK=""; DATA_DIR=/srv/xiaowork-blog; DOMAIN=""; SMTP=""; APP_SUBNET=172.30.240.0/24
+PROXY_MODE=""; WEB_PORT=13000; API_PORT=18081
 while [ $# -gt 0 ]; do
   case "$1" in
     --npm-network) NPM_NETWORK="${2:-}"; shift 2;;
+    --proxy-mode) PROXY_MODE="${2:-}"; shift 2;;
+    --web-port) WEB_PORT="${2:-}"; shift 2;;
+    --api-port) API_PORT="${2:-}"; shift 2;;
     --data-dir) DATA_DIR="${2:-}"; shift 2;;
     --domain) DOMAIN="${2:-}"; shift 2;;
     --smtp) SMTP="${2:-}"; shift 2;;
     --app-subnet) APP_SUBNET="${2:-}"; shift 2;;
-    -h|--help) sed -n '2,9p' "$0"; exit 0;;
+    -h|--help) sed -n '2,11p' "$0"; exit 0;;
     *) echo "unknown option $1" >&2; exit 2;;
   esac
 done
@@ -94,7 +100,7 @@ have ip && ip -4 route 2>/dev/null | awk '{print $1}' | grep / | while read -r r
   overlap "$r" "$APP_SUBNET" && note "冲突：主机路由 $r 与 APP_SUBNET 重叠"
 done
 
-section "7. Nginx Proxy Manager"
+section "7. Nginx Proxy Manager（PROXY_MODE=docker-network）"
 npm_ids="$(docker ps -a --format '{{.ID}} {{.Image}}' 2>/dev/null | awk 'tolower($2) ~ /nginx-proxy-manager/ {print $1}')"
 if [ -z "$npm_ids" ]; then
   note "没有找到镜像名包含 nginx-proxy-manager 的容器；请人工确认 NPM 的容器名"
@@ -117,6 +123,36 @@ if [ -n "$NPM_NETWORK" ]; then
     note "网络 $NPM_NETWORK 不存在"
   fi
 fi
+
+section "7b. 主机网络反代（1Panel OpenResty 等，PROXY_MODE=host-loopback）"
+host_proxies="$(docker ps --filter network=host --format '{{.Names}}\t{{.Image}}' 2>/dev/null)"
+if [ -n "$host_proxies" ]; then
+  printf '%s\n' "$host_proxies" | sed 's/^/  主机网络容器 /'
+  printf '%s\n' "$host_proxies" | grep -qiE 'openresty|nginx|caddy|traefik' && note "检测到主机网络中的反代：建议 PROXY_MODE=host-loopback（见 docs/deploy/1Panel-OpenResty部署指南.md）"
+else
+  note "没有使用主机网络的容器"
+fi
+compose_v="$(docker compose version --short 2>/dev/null | sed 's/^v//')"
+case "$compose_v" in
+  ""|1.*|2.[0-9].*|2.1[0-9].*|2.2[0-3].*|2.24.[0-3]) note "Compose ${compose_v:-缺失}：host-loopback 需要 2.24.4 或以上";;
+  *) note "Compose $compose_v 支持 host-loopback";;
+esac
+for p in 80 443; do
+  have ss && ss -Htlnp "sport = :$p" 2>/dev/null \
+    | awk '{ procs = $6; gsub(/users:\(\(|\)\)/, "", procs); n = split(procs, a, /\),\(/); names = "";
+             for (i = 1; i <= n; i++) { split(a[i], f, ","); gsub(/"/, "", f[1]); if (index(" " names " ", " " f[1] " ") == 0) names = names " " f[1] }
+             print "  端口 " $4 " 由" names " 监听" }' | sort -u
+done
+for pair in "WEB_HOST_PORT:$WEB_PORT" "API_HOST_PORT:$API_PORT"; do
+  name="${pair%%:*}"; p="${pair##*:}"
+  if have ss && [ -n "$(ss -Htln "sport = :$p" 2>/dev/null)" ]; then
+    owner="$(docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -F "127.0.0.1:$p->" | awk '{print $1}' | head -n 1)"
+    case "$owner" in xiaowork-blog-*) note "$name=$p 已由本博客（$owner）使用";; *) note "冲突：$name=$p 已被占用（$(ss -Htlnp "sport = :$p" 2>/dev/null | awk '{print $6}' | head -n 1)）；host-loopback 模式请换一个端口";; esac
+  else
+    note "$name=$p 空闲（host-loopback 模式只绑定 127.0.0.1）"
+  fi
+done
+[ -n "$PROXY_MODE" ] && note "当前配置：PROXY_MODE=$PROXY_MODE"
 
 section "8. 1Panel / 其他面板"
 have systemctl && systemctl list-units --type=service --no-legend 2>/dev/null | grep -iE '1panel|openresty|nginx|apache|caddy|bt' | sed 's/^/  /'

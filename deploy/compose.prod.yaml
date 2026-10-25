@@ -1,12 +1,18 @@
-# XiaoWork Blog — production stack (P8-A). Used by deploy/install.sh, update.sh, rollback.sh, backup.sh and
-# restore.sh; do not run `docker compose down -v` against it (that deletes the database volume).
+# XiaoWork Blog — production stack (P8-A; proxy modes since P8-B6). Used by the deploy/*.sh scripts through
+# lib.sh `dc`; do not run `docker compose down -v` against it (that deletes the database volume).
 #
-#   Internet ─► Nginx Proxy Manager (separate stack, owns ports 80/443) ─► PROXY_NETWORK
-#                 /api/v1/*, /media/*  ─► xiaowork-blog-api:8080
-#                 everything else       ─► xiaowork-blog-web:3000
+#   PROXY_MODE=docker-network (default) — this file alone:
+#     Internet ─► Nginx Proxy Manager (separate stack, owns ports 80/443) ─► PROXY_NETWORK
+#                   /api/v1/*, /media/*  ─► xiaowork-blog-api:8080
+#                   everything else       ─► xiaowork-blog-web:3000
+#   PROXY_MODE=host-loopback — plus compose.host-loopback.yaml (drops PROXY_NETWORK):
+#     Internet ─► proxy on the host network, e.g. 1Panel OpenResty (owns 80/443) ─► 127.0.0.1 only
+#                   /api/v1/*, /media/*  ─► 127.0.0.1:API_HOST_PORT (18081)
+#                   everything else       ─► 127.0.0.1:WEB_HOST_PORT (13000)
 #
-# No service publishes a host port: NPM reaches web/api over the shared Docker network, the database is
-# on an internal network without Internet access, and only api has outbound access (SMTP).
+# This file on its own must stay the docker-network stack: an update started by a pre-P8-B6 update.sh only
+# passes this file, and web/api must still join the NPM network then. The database never publishes a
+# port and sits on an internal network without Internet access; only api has outbound access (SMTP).
 #
 # Images are built on the server from the checked-out commit and tagged with APP_VERSION (the short
 # commit SHA), so the previous release stays available for rollback.
@@ -73,8 +79,9 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM in deploy/.env}
-      # Networks whose X-Forwarded-For is believed: the NPM proxy network and the app network (Nuxt SSR).
-      # install.sh fills this from `docker network inspect` when it is left empty.
+      # Peers whose X-Forwarded-For is believed (install.sh fills it when empty):
+      #   docker-network: the NPM proxy network + APP_SUBNET (Nuxt SSR)
+      #   host-loopback:  APP_SUBNET only — published ports reach the containers from this network's gateway
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?set TRUSTED_PROXY_CIDRS (install.sh can detect it)}
       MEDIA_MAX_BYTES: ${MEDIA_MAX_BYTES:-}
       MEDIA_MAX_PIXELS: ${MEDIA_MAX_PIXELS:-}
@@ -126,15 +133,17 @@ networks:
   # Database traffic only; `internal` removes the route to the Internet.
   backend:
     internal: true
-  # Nuxt SSR → API. Fixed subnet so it can be listed in TRUSTED_PROXY_CIDRS.
+  # Nuxt SSR → API (and, in host-loopback mode, the published ports). Fixed subnet so it can be listed in
+  # TRUSTED_PROXY_CIDRS.
   app:
     ipam:
       config:
         - subnet: ${APP_SUBNET:-172.30.240.0/24}
-  # The existing Nginx Proxy Manager network (created by the NPM stack, not by this file).
+  # The existing Nginx Proxy Manager network (created by the NPM stack, not by this file). lib.sh requires
+  # PROXY_NETWORK in docker-network mode; compose.host-loopback.yaml removes this network.
   proxy:
     external: true
-    name: ${PROXY_NETWORK:?set PROXY_NETWORK (the Docker network of Nginx Proxy Manager) in deploy/.env}
+    name: ${PROXY_NETWORK:-}
 
 volumes:
   # Fixed name: survives `docker compose down`, project renames and image upgrades. Never add -v.

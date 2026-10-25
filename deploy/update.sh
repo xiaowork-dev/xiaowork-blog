@@ -34,6 +34,7 @@ done
 check_tools
 load_env
 check_proxy_network
+check_host_ports
 detect_trusted_proxies
 OLD="$(current_version || true)"
 [ -n "$OLD" ] || die "尚未安装（$STATE_DIR/current 不存在）；请先运行 deploy/install.sh"

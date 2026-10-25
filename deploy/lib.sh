@@ -10,7 +10,7 @@ set -Eeuo pipefail
 DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$DEPLOY_DIR/.." && pwd)"
 ENV_FILE="${ENV_FILE:-$DEPLOY_DIR/.env}"
-COMPOSE_FILE="$DEPLOY_DIR/compose.prod.yaml"
+COMPOSE_FILE="$DEPLOY_DIR/compose.prod.yaml"   # + compose.<PROXY_MODE>.yaml, see dc()
 PROJECT=xiaowork-blog
 
 c_red=$'\033[31m'; c_grn=$'\033[32m'; c_ylw=$'\033[33m'; c_off=$'\033[0m'
@@ -33,6 +33,15 @@ check_tools() {
   case "$v" in 1.*|2.[0-9].*|2.1[0-9].*) die "Docker Compose 版本过旧（$v），需要 2.20 或以上";; esac
 }
 
+# compose_at_least MAJOR MINOR PATCH: the installed Docker Compose is at least that version.
+compose_at_least() {
+  local v a b c
+  v="$(docker compose version --short 2>/dev/null | sed 's/^v//; s/[^0-9.].*$//')"
+  IFS=. read -r a b c <<< "$v"
+  a="${a:-0}"; b="${b:-0}"; c="${c:-0}"
+  [ "$a" -gt "$1" ] || { [ "$a" -eq "$1" ] && { [ "$b" -gt "$2" ] || { [ "$b" -eq "$2" ] && [ "$c" -ge "$3" ]; }; }; }
+}
+
 # load_env reads deploy/.env into the environment and refuses placeholders or unsafe values.
 load_env() {
   [ -f "$ENV_FILE" ] || die "未找到 $ENV_FILE；先运行 deploy/install.sh 生成"
@@ -50,7 +59,22 @@ load_env() {
     export "$key=$val"
   done < "$ENV_FILE"
   local bad=() name
-  for name in PUBLIC_BASE_URL DATA_DIR POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD APP_SECRET_KEY SMTP_HOST SMTP_FROM PROXY_NETWORK; do
+  # Older deploy/.env files have no PROXY_MODE: they keep the original Nginx Proxy Manager network mode.
+  PROXY_MODE="${PROXY_MODE:-docker-network}"; export PROXY_MODE
+  local required="PUBLIC_BASE_URL DATA_DIR POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD APP_SECRET_KEY SMTP_HOST SMTP_FROM"
+  case "$PROXY_MODE" in
+    docker-network) required="$required PROXY_NETWORK";;
+    host-loopback)
+      WEB_HOST_PORT="${WEB_HOST_PORT:-13000}"; API_HOST_PORT="${API_HOST_PORT:-18081}"; export WEB_HOST_PORT API_HOST_PORT
+      for name in WEB_HOST_PORT API_HOST_PORT; do
+        [[ "${!name}" =~ ^[0-9]+$ ]] && [ "${!name}" -ge 1024 ] && [ "${!name}" -le 65535 ] || bad+=("$name 必须是 1024–65535 之间的端口号")
+      done
+      [ "$WEB_HOST_PORT" != "$API_HOST_PORT" ] || bad+=("WEB_HOST_PORT 与 API_HOST_PORT 不能相同")
+      # compose.host-loopback.yaml uses the !override / !reset merge tags.
+      compose_at_least 2 24 4 || bad+=("host-loopback 需要 Docker Compose 2.24.4 或以上（当前 $(docker compose version --short 2>/dev/null || echo 未知)）");;
+    *) bad+=("PROXY_MODE 只能是 docker-network（Nginx Proxy Manager 等容器反代）或 host-loopback（1Panel OpenResty 等主机网络反代）");;
+  esac
+  for name in $required; do
     [ -n "${!name:-}" ] || bad+=("$name 未设置")
     case "${!name:-}" in *CHANGE_ME*) bad+=("$name 仍是示例值");; esac
   done
@@ -70,7 +94,11 @@ load_env() {
   export APP_VERSION="${APP_VERSION:-$(current_version || true)}"
 }
 
-dc() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
+dc() {
+  local overlay=()
+  [ "${PROXY_MODE:-docker-network}" = host-loopback ] && overlay=(-f "$DEPLOY_DIR/compose.host-loopback.yaml")
+  docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "${overlay[@]}" --env-file "$ENV_FILE" "$@"
+}
 
 current_version()  { [ -f "${STATE_DIR:?}/current" ] && cat "$STATE_DIR/current"; }
 previous_version() { [ -f "${STATE_DIR:?}/previous" ] && cat "$STATE_DIR/previous"; }
@@ -90,15 +118,22 @@ build_images() {
 detect_trusted_proxies() {
   if [ -n "${TRUSTED_PROXY_CIDRS:-}" ]; then return; fi
   local subnet
-  subnet="$(docker network inspect "$PROXY_NETWORK" -f '{{range .IPAM.Config}}{{.Subnet}},{{end}}' 2>/dev/null | sed 's/,$//')"
-  [ -n "$subnet" ] || die "无法读取代理网络 $PROXY_NETWORK 的网段，请手动设置 TRUSTED_PROXY_CIDRS"
-  TRUSTED_PROXY_CIDRS="$subnet,${APP_SUBNET:-172.30.240.0/24}"
+  if [ "$PROXY_MODE" = host-loopback ]; then
+    # Requests from the host proxy reach the published ports through this stack's own app network (they
+    # arrive from its gateway), and Nuxt SSR calls the API from the same network: nothing else is trusted.
+    TRUSTED_PROXY_CIDRS="${APP_SUBNET:-172.30.240.0/24}"
+  else
+    subnet="$(docker network inspect "$PROXY_NETWORK" -f '{{range .IPAM.Config}}{{.Subnet}},{{end}}' 2>/dev/null | sed 's/,$//')"
+    [ -n "$subnet" ] || die "无法读取代理网络 $PROXY_NETWORK 的网段，请手动设置 TRUSTED_PROXY_CIDRS"
+    TRUSTED_PROXY_CIDRS="$subnet,${APP_SUBNET:-172.30.240.0/24}"
+  fi
   sed -i "s|^TRUSTED_PROXY_CIDRS=.*$|TRUSTED_PROXY_CIDRS=$TRUSTED_PROXY_CIDRS|" "$ENV_FILE"
   export TRUSTED_PROXY_CIDRS
   log "已写入 TRUSTED_PROXY_CIDRS=$TRUSTED_PROXY_CIDRS"
 }
 
 check_proxy_network() {
+  if [ "$PROXY_MODE" = host-loopback ]; then return 0; fi   # no shared Docker network in this mode
   # Docker's predefined networks have no service-name DNS (bridge) or no isolation (host/none), so NPM could
   # not reach xiaowork-blog-web / xiaowork-blog-api by name.
   case "$PROXY_NETWORK" in
@@ -217,6 +252,29 @@ RELEASE_TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
 # release_tags_at COMMIT: release tags pointing at COMMIT (nothing when it is an unreleased commit).
 release_tags_at() {
   git -C "$REPO_DIR" tag --points-at "${1:?}" 2>/dev/null | grep -E "$RELEASE_TAG_RE" || true
+}
+
+# port_listening PORT: true when something listens on TCP PORT (any address).
+port_listening() {
+  if command -v ss >/dev/null 2>&1; then
+    [ -n "$(ss -Htln "sport = :${1:?}" 2>/dev/null || true)" ]
+  else
+    (exec 3<>"/dev/tcp/127.0.0.1/${1:?}") 2>/dev/null
+  fi
+}
+
+# check_host_ports: host-loopback mode — WEB_HOST_PORT / API_HOST_PORT must be free, unless this stack
+# already publishes them (re-run, update). Nothing else is stopped or touched.
+check_host_ports() {
+  [ "$PROXY_MODE" = host-loopback ] || return 0
+  local port svc ours
+  for svc in web api; do
+    if [ "$svc" = web ]; then port="$WEB_HOST_PORT"; else port="$API_HOST_PORT"; fi
+    port_listening "$port" || continue
+    ours="$(docker ps --filter "label=com.docker.compose.project=$PROJECT" --format '{{.Ports}}' 2>/dev/null | grep -c "127.0.0.1:$port->" || true)"
+    [ "$ours" -gt 0 ] && continue
+    die "端口 $port（$svc）已被其他程序占用。请在 $ENV_FILE 中把 $( [ "$svc" = web ] && echo WEB_HOST_PORT || echo API_HOST_PORT ) 改为空闲端口；本脚本不会停止任何其他服务"
+  done
 }
 
 # fetch_release_tags: git fetch --tags from origin. git refuses ("would clobber existing tag") to replace a

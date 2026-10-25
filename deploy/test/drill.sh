@@ -3,7 +3,10 @@
 # that plays the role of a fresh Linux server; it never touches the developer's own Docker volumes and never
 # talks to the real GitHub. See deploy/test/README.md.
 #
-#   drill.sh prepare           tools, base images, Git origin with a snapshot of /src, simulated NPM + mail
+#   drill.sh prepare           tools, base images, Git origin with a snapshot of /src, simulated proxy + mail
+#                              DRILL_MODE=docker-network (default): nginx as Nginx Proxy Manager on network npm_proxy
+#                              DRILL_MODE=host-loopback: nginx on the host network as 1Panel's OpenResty
+#                              SNAPSHOT_SRC=/path: snapshot another tree (e.g. an older release) instead of /src
 #   drill.sh configure         fill deploy/.env for the drill (https://localhost:18443, mail catcher)
 #   drill.sh scenario NAME     push a scenario commit to the drill origin:
 #                                migration      – adds an additive goose migration (schema 8)
@@ -22,11 +25,13 @@ SERVER=/opt/xiaowork-blog          # the "server" checkout used by the deploy sc
 ORIGIN=/work/origin.git            # bare repository playing GitHub
 DEV=/work/dev                      # developer clone used to push scenario commits and tags
 DRILL=/drill                       # host folder: base-images.tar, outputs
+DRILL_MODE="${DRILL_MODE:-docker-network}"
+SNAPSHOT_SRC="${SNAPSHOT_SRC:-/src}"
 MOCK=/work/mock                    # mock API state: mode, releases.lines
 
 # snapshot DIR: copy the working tree from /src without dependencies, build output, local data or .git.
 snapshot() {
-  tar -C /src --exclude=./.git --exclude=./.data --exclude="*/node_modules" --exclude="*/.output" --exclude="*/.nuxt" \
+  tar -C "$SNAPSHOT_SRC" --exclude=./.git --exclude=./.data --exclude="*/node_modules" --exclude="*/.output" --exclude="*/.nuxt" \
       --exclude=./deploy/.env -cf - . | tar -C "$1" -xf -
 }
 
@@ -46,18 +51,36 @@ prepare() {
   git clone -q "$ORIGIN" "$DEV"
   rm -rf "$SERVER" && git clone -q "$ORIGIN" "$SERVER"
 
-  # Simulated Nginx Proxy Manager: its own network, self-signed TLS for localhost, the documented routes.
-  docker network inspect npm_proxy >/dev/null 2>&1 || docker network create npm_proxy >/dev/null
   mkdir -p /work/certs
   openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
     -keyout /work/certs/site.key.pem -out /work/certs/site.pem 2>/dev/null
-  docker rm -f npm-sim mail-sim >/dev/null 2>&1 || true
-  docker run -d --name npm-sim --network npm_proxy -p 443:443 \
-    -v "$SERVER/deploy/nginx/npm-equivalent.conf:/etc/nginx/conf.d/default.conf:ro" \
-    -v /work/certs:/etc/nginx/certs:ro nginx:1.30.5-alpine >/dev/null
-  # Mail catcher standing in for the SMTP provider (reachable from api over the proxy network).
-  docker run -d --name mail-sim --network npm_proxy -p 8025:8025 axllent/mailpit:v1.32.0 >/dev/null
-  echo "prepared: origin=$ORIGIN server=$SERVER"
+  docker rm -f npm-sim openresty-sim mail-sim >/dev/null 2>&1 || true
+  if [ "$DRILL_MODE" = host-loopback ]; then
+    # Simulated 1Panel OpenResty: a container on the HOST network that owns 80/443 and forwards to 127.0.0.1.
+    docker run -d --name openresty-sim --network host \
+      -v "/src/deploy/nginx/openresty-host-loopback.conf:/etc/nginx/conf.d/default.conf:ro" \
+      -v /work/certs:/etc/nginx/certs:ro nginx:1.30.5-alpine >/dev/null
+    # Mail catcher on the host network (1025/8025); api reaches it at its own network gateway (first address of APP_SUBNET). A port
+    # published from the default bridge would not do: Docker drops traffic forwarded between bridge networks.
+    # Reverse DNS of the client address would delay the SMTP greeting past the API timeout on the host network.
+    docker run -d --name mail-sim --network host -e MP_SMTP_DISABLE_RDNS=true axllent/mailpit:v1.32.0 >/dev/null
+  else
+    # Simulated Nginx Proxy Manager: its own network, self-signed TLS for localhost, the documented routes.
+    docker network inspect npm_proxy >/dev/null 2>&1 || docker network create npm_proxy >/dev/null
+    docker run -d --name npm-sim --network npm_proxy -p 443:443 \
+      -v "/src/deploy/nginx/npm-equivalent.conf:/etc/nginx/conf.d/default.conf:ro" \
+      -v /work/certs:/etc/nginx/certs:ro nginx:1.30.5-alpine >/dev/null
+    # Mail catcher standing in for the SMTP provider (reachable from api over the proxy network).
+    docker run -d --name mail-sim --network npm_proxy -p 8025:8025 axllent/mailpit:v1.32.0 >/dev/null
+  fi
+  echo "prepared ($DRILL_MODE): origin=$ORIGIN server=$SERVER snapshot=$SNAPSHOT_SRC"
+}
+
+# app_gateway ENV_FILE: first address of APP_SUBNET (the host side of the blog's app network).
+app_gateway() {
+  local subnet
+  subnet="$(sed -n "s/^APP_SUBNET=['\"]\{0,1\}\([0-9.]*\)\/.*/\1/p" "$1" | head -n 1)"
+  echo "${subnet%.*}.$(( ${subnet##*.} + 1 ))"
 }
 
 configure() {
@@ -65,9 +88,15 @@ configure() {
   [ -f "$env" ] || { echo "run deploy/install.sh once first (it creates deploy/.env)"; exit 1; }
   sed -i -e 's|^PUBLIC_BASE_URL=.*|PUBLIC_BASE_URL=https://localhost:18443|' \
          -e 's|^DATA_DIR=.*|DATA_DIR=/srv/xiaowork-blog|' \
-         -e 's|^SMTP_HOST=.*|SMTP_HOST=mail-sim|' -e 's|^SMTP_PORT=.*|SMTP_PORT=1025|' -e 's|^SMTP_TLS=.*|SMTP_TLS=none|' \
-         -e 's|^PROXY_NETWORK=.*|PROXY_NETWORK=npm_proxy|' \
+         -e 's|^SMTP_PORT=.*|SMTP_PORT=1025|' -e 's|^SMTP_TLS=.*|SMTP_TLS=none|' \
          -e 's|^# *GOPROXY=.*|GOPROXY=https://goproxy.cn,direct|' "$env"
+  if [ "$DRILL_MODE" = host-loopback ]; then
+    sed -i -e 's|^PROXY_MODE=.*|PROXY_MODE=host-loopback|' -e "s|^SMTP_HOST=.*|SMTP_HOST=$(app_gateway "$env")|" "$env"
+    grep -q '^PROXY_MODE=' "$env" || echo 'PROXY_MODE=host-loopback' >> "$env"
+  else
+    # An older deploy/.env (before P8-B6) has no PROXY_MODE line and is left that way on purpose.
+    sed -i -e 's|^SMTP_HOST=.*|SMTP_HOST=mail-sim|' -e 's|^PROXY_NETWORK=.*|PROXY_NETWORK=npm_proxy|' "$env"
+  fi
   grep -q '^GOPROXY=' "$env" || echo 'GOPROXY=https://goproxy.cn,direct' >> "$env"
   echo "configured $env (drill values; SMTP_TLS=none is accepted only because the site is https://localhost)"
 }

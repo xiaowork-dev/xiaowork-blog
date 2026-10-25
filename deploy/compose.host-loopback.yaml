@@ -1,0 +1,21 @@
+# PROXY_MODE=host-loopback: the reverse proxy runs on the host network (e.g. 1Panel's OpenResty container,
+# or nginx installed on the host) and forwards to ports published on 127.0.0.1 only — never on a public
+# address. The containers themselves stay on their own bridge networks; the database publishes nothing.
+# Applied on top of compose.prod.yaml by lib.sh `dc`; `!override` / `!reset` need Docker Compose 2.24.4+.
+
+services:
+  api:
+    # The networks of compose.prod.yaml without the NPM proxy network.
+    networks: !override
+      backend: {}
+      app: {}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-18081}:8080"
+  web:
+    networks: !override
+      app: {}
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-13000}:3000"
+
+networks:
+  proxy: !reset {}

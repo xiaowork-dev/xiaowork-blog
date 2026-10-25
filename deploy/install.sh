@@ -29,24 +29,51 @@ ask() {  # ask VAR PROMPT DEFAULT
 guided_config() {
   echo
   echo "== 首次配置（直接回车使用方括号中的默认值；之后可随时编辑 $ENV_FILE）=="
-  local domain data net subnet smtp_host smtp_port smtp_tls smtp_user smtp_pass smtp_from n i free
+  local domain data mode net subnet web_port api_port smtp_host smtp_port smtp_tls smtp_user smtp_pass smtp_from n i free host_proxy
   while :; do
     ask domain "网站域名（不带 https://，例如 blog.example.com）" ""
     [[ "$domain" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]+)?$ ]] && break
     echo "  域名格式不正确"
   done
   ask data "数据目录（图片、备份与状态；数据库在 Docker 数据卷中）" "/srv/xiaowork-blog"
-  echo "  Nginx Proxy Manager 必须与博客在同一个自定义 Docker 网络中。现有自定义网络："
-  for n in $(docker network ls --filter driver=bridge --format '{{.Name}}'); do
-    [ "$n" = bridge ] && continue
-    echo "    $n  （成员：$(docker network inspect -f '{{range .Containers}}{{.Name}} {{end}}' "$n")）"
-  done
+  # Which reverse proxy owns 80/443? A container on the host network (1Panel's OpenResty) suggests host-loopback.
+  host_proxy="$(docker ps --filter network=host --format '{{.Names}} ({{.Image}})' 2>/dev/null | grep -iE 'openresty|nginx|caddy|traefik' | head -n 3 | tr '\n' ' ' || true)"
+  echo "  反向代理方式："
+  echo "    docker-network — 反代是容器（如 Nginx Proxy Manager），与博客共用一个自定义 Docker 网络；博客不占用任何主机端口"
+  echo "    host-loopback  — 反代在主机网络上（如 1Panel 的 OpenResty），通过 127.0.0.1 上的端口转发到博客"
+  [ -n "$host_proxy" ] && echo "  检测到主机网络中的反代容器：$host_proxy→ 建议选择 host-loopback"
   while :; do
-    ask net "NPM 所在网络名" "npm_default"
-    case "$net" in bridge|host|none) echo "  不能使用 Docker 预置网络 $net（见运维手册 §4）"; continue;; esac
-    docker network inspect "$net" >/dev/null 2>&1 && break
-    echo "  网络 $net 不存在"
+    ask mode "反代方式" "$([ -n "$host_proxy" ] && echo host-loopback || echo docker-network)"
+    case "$mode" in docker-network|host-loopback) break;; *) echo "  请输入 docker-network 或 host-loopback";; esac
   done
+  if [ "$mode" = docker-network ]; then
+    echo "  Nginx Proxy Manager 必须与博客在同一个自定义 Docker 网络中。现有自定义网络："
+    for n in $(docker network ls --filter driver=bridge --format '{{.Name}}'); do
+      [ "$n" = bridge ] && continue
+      echo "    $n  （成员：$(docker network inspect -f '{{range .Containers}}{{.Name}} {{end}}' "$n")）"
+    done
+    while :; do
+      ask net "NPM 所在网络名" "npm_default"
+      case "$net" in bridge|host|none) echo "  不能使用 Docker 预置网络 $net（见运维手册 §4）"; continue;; esac
+      docker network inspect "$net" >/dev/null 2>&1 && break
+      echo "  网络 $net 不存在"
+    done
+  else
+    echo "  博客只在 127.0.0.1 上发布两个端口（外网无法直接访问），由主机上的反代转发："
+    while :; do
+      ask web_port "网站（Nuxt）端口" "13000"
+      [[ "$web_port" =~ ^[0-9]+$ ]] && [ "$web_port" -ge 1024 ] && [ "$web_port" -le 65535 ] || { echo "  端口应为 1024–65535"; continue; }
+      port_listening "$web_port" && { echo "  端口 $web_port 已被占用"; continue; }
+      break
+    done
+    while :; do
+      ask api_port "API 端口" "18081"
+      [[ "$api_port" =~ ^[0-9]+$ ]] && [ "$api_port" -ge 1024 ] && [ "$api_port" -le 65535 ] || { echo "  端口应为 1024–65535"; continue; }
+      [ "$api_port" != "$web_port" ] || { echo "  不能与网站端口相同"; continue; }
+      port_listening "$api_port" && { echo "  端口 $api_port 已被占用"; continue; }
+      break
+    done
+  fi
   free=""
   for i in 172.30.240.0/24 172.31.240.0/24 10.254.240.0/24 192.168.240.0/24; do
     if [ -z "$(subnet_conflicts "$i")" ]; then free="$i"; break; fi
@@ -68,7 +95,13 @@ guided_config() {
   ask smtp_from "发件人" "XiaoWork Blog <no-reply@${domain%%:*}>"
   set_env PUBLIC_BASE_URL "https://$domain"
   set_env DATA_DIR "$data"
-  set_env PROXY_NETWORK "$net"
+  set_env PROXY_MODE "$mode"
+  if [ "$mode" = docker-network ]; then
+    set_env PROXY_NETWORK "$net"
+  else
+    set_env WEB_HOST_PORT "$web_port"
+    set_env API_HOST_PORT "$api_port"
+  fi
   set_env APP_SUBNET "$subnet"
   set_env SMTP_HOST "$smtp_host"
   set_env SMTP_PORT "$smtp_port"
@@ -105,10 +138,10 @@ if [ -z "$(current_version || true)" ]; then
   # Conflict prechecks before the first start (the full read-only report is deploy/precheck.sh).
   conflicts="$(subnet_conflicts "${APP_SUBNET:-172.30.240.0/24}")"
   [ -z "$conflicts" ] || die "APP_SUBNET=${APP_SUBNET:-172.30.240.0/24} 与现有 Docker 网络重叠：$conflicts。请在 $ENV_FILE 中换一个空闲网段"
-  if command -v ss >/dev/null 2>&1 && [ -z "$(ss -Htln 'sport = :443' 2>/dev/null || true)" ]; then
-    warn "本机没有程序监听 443 端口：Nginx Proxy Manager 是否在运行？（博客本身不占用 80/443）"
-  fi
+  port_listening 443 || warn "本机没有程序监听 443 端口：反向代理（Nginx Proxy Manager / OpenResty）是否在运行？（博客本身不占用 80/443）"
 fi
+# host-loopback: the published 127.0.0.1 ports must be free unless this stack already owns them.
+check_host_ports
 prepare_dirs
 check_disk 3072
 detect_trusted_proxies
@@ -116,8 +149,13 @@ detect_trusted_proxies
 if [ -n "$(current_version || true)" ]; then
   APP_VERSION="$(current_version)"; export APP_VERSION
   if image_exists "xiaowork-blog-api:$APP_VERSION" && dc ps --status running -q web >/dev/null 2>&1 && wait_healthy db api web 2>/dev/null && smoke_test; then
-    log "已安装版本 $APP_VERSION 且运行正常；无需重复安装。升级请使用 deploy/manage.sh update"
-    exit 0
+    # Apply edits to deploy/.env (PROXY_MODE, ports, TRUSTED_PROXY_CIDRS…): compose recreates only the
+    # containers whose configuration changed and leaves the others running.
+    if dc up -d --no-deps api web >/dev/null 2>&1 && wait_healthy api web && smoke_test; then
+      log "已安装版本 $APP_VERSION 且运行正常（反代方式 $PROXY_MODE，deploy/.env 的改动已生效）；无需重复安装。升级请使用 deploy/manage.sh update"
+      exit 0
+    fi
+    warn "按 deploy/.env 重新创建 api/web 后未通过检查，将重新启动该版本（数据不会被删除）。"
   fi
   warn "检测到已安装版本 $APP_VERSION，但服务未正常运行，将重新启动该版本（数据不会被删除）。"
 fi
@@ -146,13 +184,21 @@ wait_healthy api web || die "服务未能通过健康检查（查看：docker co
 smoke_test || die "冒烟测试失败"
 
 record_release "$VERSION" "$(current_version || true)" "${RELEASE_REF:-checked-out}"
-log "安装完成：版本 $VERSION，数据库结构版本 $(schema_version)"
+log "安装完成：版本 $VERSION，数据库结构版本 $(schema_version)，反代方式 $PROXY_MODE"
+proxy_next_step() {
+  if [ "$PROXY_MODE" = host-loopback ]; then
+    printf '%s\n' "在 1Panel（OpenResty）或主机上的 nginx 中添加反向代理（见 docs/deploy/1Panel-OpenResty部署指南.md）：" \
+      "       / → http://127.0.0.1:$WEB_HOST_PORT ；/api/v1/ 与 /media/ → http://127.0.0.1:$API_HOST_PORT（保留路径）"
+  else
+    printf '%s\n' "在 Nginx Proxy Manager 中添加代理主机（见 docs/deploy/部署与运维手册.md §4）：" \
+      "       域名 → http://xiaowork-blog-web:3000；自定义位置 /api/v1/ 与 /media/ → http://xiaowork-blog-api:8080"
+  fi
+}
 cat <<EOF
 
 下一步：
   1. 创建首个管理员：  sudo $DEPLOY_DIR/manage.sh admin create-admin -email you@example.com -nickname 博主
-  2. 在 Nginx Proxy Manager 中添加代理主机（见 docs/deploy/部署与运维手册.md §4）：
-       域名 → http://xiaowork-blog-web:3000；自定义位置 /api/v1/ 与 /media/ → http://xiaowork-blog-api:8080
+  2. $(proxy_next_step)
   3. 配置定时备份：  sudo crontab -e  →  30 3 * * * $DEPLOY_DIR/manage.sh backup --label daily >> $DATA_DIR/backups/backup.log 2>&1
   4. 以后检查与安装新版本：  sudo $DEPLOY_DIR/manage.sh check / update
 EOF

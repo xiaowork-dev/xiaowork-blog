@@ -3,7 +3,9 @@
 `drill.sh` 在一个 **Docker-in-Docker** 容器中模拟一台全新的 Linux 服务器，用来验证 `deploy/*.sh` 的安装、更新、回滚、备份和恢复。演练环境包含：
 
 - 自己的 Docker 守护进程；
-- 一个扮演 Nginx Proxy Manager 的 nginx 容器（自签名 HTTPS，配置为 `deploy/nginx/npm-equivalent.conf`）；
+- 一个模拟反向代理的 nginx 容器（自签名 HTTPS）：
+  - 默认 `DRILL_MODE=docker-network`：扮演 Nginx Proxy Manager，位于 `npm_proxy` 网络，配置为 `deploy/nginx/npm-equivalent.conf`；
+  - `DRILL_MODE=host-loopback`：扮演 1Panel 的 OpenResty，使用演练容器的主机网络，配置为 `deploy/nginx/openresty-host-loopback.conf`（P8-B6）；
 - Mailpit，扮演 SMTP；
 - 一个裸 Git 仓库，扮演 GitHub。
 
@@ -60,6 +62,23 @@ docker exec xwb-drill-a drill move-tag v0.1.0                  # 模拟发布标
 - `PUBLIC_BASE_URL=https://localhost:18443`；
 - 只有 `localhost` 站点允许 `SMTP_TLS=none`；
 - `GOPROXY` 使用国内镜像，因为演练容器无法直接访问 proxy.golang.org。
+
+### 反代方式演练（P8-B6）
+
+```bash
+# 1Panel OpenResty（主机网络）：prepare 与 configure 都要带上 DRILL_MODE
+docker exec xwb-drill-a bash -c 'DRILL_MODE=host-loopback drill prepare'
+docker exec xwb-drill-a bash -c 'DRILL_MODE=host-loopback drill configure'   # 写入 PROXY_MODE=host-loopback，SMTP 走 app 网络网关
+# 旧版本升级兼容：用某个发布的源码树（如 git archive v1.0.0-rc.2）作为第一个提交
+docker run ... -v "<rc.2 源码目录>:/src-rc2:ro" ...
+docker exec xwb-drill-a bash -c 'SNAPSHOT_SRC=/src-rc2 drill prepare'
+# 安装后 drill sync 把当前工作区推成新提交，再用旧版 update.sh 升级
+```
+
+注意：
+
+- host-loopback 下，Mailpit 运行在主机网络并关闭反向 DNS（`MP_SMTP_DISABLE_RDNS=true`），否则 SMTP 问候会超时；
+- 在 Docker-in-Docker 中，`172.17.0.1` 是外层 Docker Desktop 的地址，容器访问演练主机要用 `APP_SUBNET` 的网关（`172.30.240.1`）。
 
 ## 清理
 

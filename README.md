@@ -21,8 +21,15 @@
 ## 部署要求
 
 - 64 位 Linux 服务器，内存 2 GB 以上，`/srv`（或你选择的数据目录）所在磁盘剩余 3 GB 以上；
-- Docker Engine 24+ 与 Docker Compose 插件 2.20+，以及 `git`、`curl`、`openssl`；
-- **已经运行的 [Nginx Proxy Manager](https://nginxproxymanager.com/)（NPM）**，且它在一个自定义 Docker 网络上。博客本身不占用 80/443 端口，也不对外发布任何端口，所有访问都经过 NPM。暂不提供不依赖 NPM 的安装方式；
+- Docker Engine 24+ 与 Docker Compose 插件 2.20+（主机网络反代模式需要 2.24.4+），以及 `git`、`curl`、`openssl`；
+- **一个已经运行、占用 80/443 的反向代理**。博客本身不占用 80/443，支持两种接入方式（安装时选择，`deploy/.env` 中的 `PROXY_MODE`）：
+
+  | 方式 | 适用 | 博客端口 |
+  |---|---|---|
+  | `docker-network`（默认） | [Nginx Proxy Manager](https://nginxproxymanager.com/)（NPM）等容器反代，位于一个自定义 Docker 网络上 | 不发布任何主机端口 |
+  | `host-loopback` | 1Panel 的 OpenResty 等使用**主机网络**的反代，或主机上直接安装的 nginx | 只发布到 `127.0.0.1:13000`（web）与 `127.0.0.1:18081`（api），端口可改 |
+
+  两种方式下数据库都不发布端口。1Panel 用户请看 [1Panel / OpenResty 部署指南](docs/deploy/1Panel-OpenResty部署指南.md)；
 - 一个指向服务器的域名，以及一个可用的 SMTP 发信账号（用于注册验证和找回密码）。
 
 所有操作都由服务器所有者在自己的终端中执行。**不需要、也不应该**把 SSH 密钥、服务器密码或 SMTP 密码交给任何人或任何 AI 工具。
@@ -41,7 +48,8 @@ sudo deploy/manage.sh install
 1. 列出 GitHub 上最新的**正式版本**，确认后切换到该版本；
 2. 首次运行时，自动生成数据库密码和应用密钥（只保存在服务器的 `deploy/.env` 中），然后逐项询问：
    - 域名、数据目录；
-   - NPM 所在的网络（会列出现有网络）；
+   - 反代方式（检测到主机网络上的 OpenResty/nginx 时建议 `host-loopback`）；
+   - NPM 所在的网络（docker-network），或 web/api 的本机端口（host-loopback）；
    - 内部网段（自动避开冲突）；
    - SMTP 设置；
 3. 构建镜像、初始化数据库并启动，最后做健康检查。
@@ -51,11 +59,16 @@ sudo deploy/manage.sh install
 安装完成后：
 
 1. **创建管理员**：`sudo deploy/manage.sh admin create-admin -email 你的邮箱 -nickname 昵称`（密码输入两次，不回显）。
-2. **在 NPM 中添加代理主机**：
-   - 域名转发到 `xiaowork-blog-web:3000`；
-   - 自定义位置 `/api/v1/` 与 `/media/` 转发到 `xiaowork-blog-api:8080`；
-   - 申请 Let's Encrypt 证书，开启 Force SSL；
-   - 详见运维手册 §4。
+2. **配置反向代理**（路径必须原样转发，不能去掉 `/api/v1` 或 `/media` 前缀）：
+   - NPM（docker-network）：
+     - 域名转发到 `xiaowork-blog-web:3000`；
+     - 自定义位置 `/api/v1/` 与 `/media/` 转发到 `xiaowork-blog-api:8080`；
+     - 申请 Let's Encrypt 证书，开启 Force SSL；
+     - 详见运维手册 §4。
+   - 1Panel OpenResty（host-loopback）：
+     - `/` → `http://127.0.0.1:13000`；
+     - `/api/v1/` 与 `/media/` → `http://127.0.0.1:18081`；
+     - 详见 [1Panel 部署指南](docs/deploy/1Panel-OpenResty部署指南.md)。
 3. **配置每日备份与异地备份**：运维手册 §6、§10。
 
 ## 日常使用
@@ -85,6 +98,7 @@ sudo deploy/manage.sh install
 | 文档 | 内容 |
 |---|---|
 | `docs/deploy/部署与运维手册.md` | 安装、NPM 配置、更新与回滚、备份与恢复、异地备份、换服务器、安全、故障排查 |
+| `docs/deploy/1Panel-OpenResty部署指南.md` | 1Panel / 主机网络反代（`PROXY_MODE=host-loopback`）的网络结构、配置与检查 |
 | `docs/deploy/上线检查清单.md` | 正式上线前逐项检查 |
 | `docs/deploy/性能基线与剩余风险.md` | 性能数据与已知风险 |
 | `CHANGELOG.md` | 各版本的变化与升级说明 |
