@@ -170,11 +170,18 @@
   - docker-network `config --quiet` 通过；
   - host-loopback 的 JSON 断言通过：没有 proxy 网络，端口只绑定 127.0.0.1。
 - 文档路径检查：检查了 160 处引用，2 处缺失都是已有项（ADR-0004 的 URL 模式；清单中对未来的 `P8-B_交付记录.md` 的引用）。
-- gitleaks v8.28.0：结果见第 5 节。
+- gitleaks v8.28.0：
+  - 暂存区扫描：no leaks found；
+  - 工作区扫描：命中 2 处，都在本地开发用的 `.env`。该文件已被 Git 忽略、未提交（`git check-ignore` 确认）；
+  - 没有暂存任何 `.env`、证书、私钥、数据库或备份文件。
 
 ## 5. GitHub Commit SHA 与 CI 状态
 
-见第 11 节（推送后补记）。
+- 功能提交：`d886fbbb1bfb2ae34951561ddf2f1609d95d1478`（`feat(deploy): PROXY_MODE=host-loopback …`），已推送到 `origin/main`，远端 SHA 已核对一致。
+- CI：[#38](https://github.com/xiaowork-dev/xiaowork-blog/actions/runs/40186190531)，**success**：
+  - web、api、compose、db-integration、deploy 全部通过；
+  - deploy 作业中，新增的“两种模式 compose 校验”和“切换到 host-loopback”步骤均为 success。
+- 本交付文档的补记提交见第 11 节。
 
 ## 6. 发现并修复的问题
 
@@ -225,9 +232,11 @@
 **等待验收。**
 
 - 功能、隔离环境测试与文档已完成。
-- 推送与 CI 结果见第 11 节。
+- 已推送，CI #38 全部通过。
 - rc.3 的标签与 Release 按要求未创建，等待项目负责人确认。
 
 ## 11. 推送与 CI 结果
 
-（推送后补记）
+- `d886fbb` → CI #38 success（见第 5 节）。
+- 本文档补记提交推送后，其 CI 结果在对话的验收总结中报告。
+- 未创建任何标签或 Release；`v1.0.0-rc.2` 未改动。
