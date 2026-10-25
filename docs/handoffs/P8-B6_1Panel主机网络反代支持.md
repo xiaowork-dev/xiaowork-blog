@@ -238,5 +238,5 @@
 ## 11. 推送与 CI 结果
 
 - `d886fbb` → CI #38 success（见第 5 节）。
-- 本文档补记提交推送后，其 CI 结果在对话的验收总结中报告。
+- `87023c8`（本文档补记）→ CI [#39](https://github.com/xiaowork-dev/xiaowork-blog/actions/runs/40186424273) success。
 - 未创建任何标签或 Release；`v1.0.0-rc.2` 未改动。

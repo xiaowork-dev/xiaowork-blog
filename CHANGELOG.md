@@ -2,15 +2,17 @@
 
 本文件记录每个正式版本的变化，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。发布流程见 `docs/RELEASING.md`。
 
-> 预发布版用于生产环境上线验收（P8-B）；验收通过后在同一提交上发布正式版 `v1.0.0`。目前还没有正式版本。当前预发布版为 `v1.0.0-rc.2`。
+> 预发布版用于生产环境上线验收（P8-B）；验收通过后在同一提交上发布正式版 `v1.0.0`。目前还没有正式版本。当前预发布版为 `v1.0.0-rc.3`。
 
 ## [Unreleased]
 
-### 计划作为 [1.0.0-rc.3] 发布（预发布，等待项目负责人确认后再打标签）
+（暂无）
 
-发布说明草稿：`docs/releases/v1.0.0-rc.3.md`。取代 `v1.0.0-rc.2`。
+## [1.0.0-rc.3] — 2026-10-25（预发布）
 
-#### 新增
+发布说明：`docs/releases/v1.0.0-rc.3.md`。取代 `v1.0.0-rc.2`。
+
+### 新增
 
 - 反代方式 `PROXY_MODE`：
   - `docker-network`（默认，Nginx Proxy Manager，与以前相同）；
@@ -21,16 +23,16 @@
 - `precheck` 新增第 7b 节。
 - 新增 `deploy/compose.host-loopback.yaml`、`deploy/nginx/openresty-host-loopback.conf` 与 `docs/deploy/1Panel-OpenResty部署指南.md`。
 
-#### 修复
+### 修复
 
 - 服务正常时再次运行 `install`，现在会应用 `deploy/.env` 的改动（只重建有变化的容器）。
 
-#### CI
+### CI
 
 - 部署作业校验两种模式的 compose 配置。
 - 部署作业新增测试：把安装切换到 host-loopback，在主机网络 nginx 后完成 HTTPS 冒烟；同时检查端口只绑定回环地址、预检结果、重复运行不重建容器、端口冲突被拒绝。
 
-#### 升级说明
+### 升级说明
 
 - 没有数据库迁移，结构版本仍为 7。
 - 现有 `deploy/.env` 不需要修改。
