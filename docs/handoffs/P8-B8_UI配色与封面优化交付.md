@@ -178,7 +178,12 @@
 
 ## 8. Git Commit SHA 和 CI 结果
 
-见第 11 节（推送后补记）。
+| 对象 | SHA | CI |
+|---|---|---|
+| P8-B8 代码与文档 | `8b30a7bf6461133c459cb2a91fedc5275ffab833`（已推送到 `origin/main`，远端 SHA 已核对） | [#43](https://github.com/xiaowork-dev/xiaowork-blog/actions/runs/40203125908) **success**：web、api、compose、db-integration、deploy 全部通过 |
+
+- `v1.0.0-rc.3` 标签仍指向 `c95f9a3`（标签对象 `5edfe22`），未改动。
+- 未创建 rc.4 标签或 Release。
 
 ## 9. 现有部署兼容性及风险
 
@@ -206,8 +211,9 @@
   2. 确认后，在本阶段最终提交上发布 `v1.0.0-rc.4` 预发布：发布说明使用 `docs/releases/v1.0.0-rc.4.md`，并把 CHANGELOG 的 Unreleased 移到正式条目。
   3. 项目负责人在 VPS 上执行 `sudo deploy/manage.sh update v1.0.0-rc.4 --pre`，然后对首页摘要有问题的文章“编辑 → 发布更新”。
   4. 线上验收通过后，再决定是否在同一提交上发布 `v1.0.0`。
-- **验收结论**：**等待验收**。开发、测试与文档已完成；推送与 CI 结果见第 11 节；rc.4 标签与 Release 按要求未创建。
+- **验收结论**：**等待验收**。开发、测试与文档已完成；已推送，CI #43 全部通过；rc.4 标签与 Release 按要求未创建。
 
 ## 11. 推送与 CI 结果
 
-（推送后补记）
+- `8b30a7b` → CI #43 success（见第 8 节）。
+- 本记录的补记提交推送后，其 CI 结果在对话的验收总结中报告。
