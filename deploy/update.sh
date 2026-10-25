@@ -46,8 +46,9 @@ if [ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]; then
 fi
 if [ "$FETCH" = 1 ]; then
   log "获取最新代码…"
-  git -C "$REPO_DIR" fetch --tags origin \
-    || die "无法从 origin 获取代码（网络不可用，或远端标签被改动——发布标签不允许移动，请先核实再处理）；网站仍在运行当前版本"
+  rc=0; fetch_release_tags || rc=$?
+  [ "$rc" != 2 ] || die "远端发布标签指向的提交与本地不同：$TAG_CONFLICTS。发布标签不允许移动，请先核实；网站仍在运行当前版本"
+  [ "$rc" = 0 ] || die "无法从 origin 获取代码（${FETCH_ERROR:-网络不可用}）；网站仍在运行当前版本"
   if git -C "$REPO_DIR" rev-parse -q --verify "refs/remotes/origin/$REF" >/dev/null; then
     warn "$REF 是分支：将部署 origin/$REF 的最新提交（开发代码，不是正式版本）"
     REF="origin/$REF"

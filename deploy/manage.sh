@@ -120,13 +120,13 @@ describe() {  # describe SHA -> "v1.2.0 (abc123def456)" or "未发布的提交 a
 }
 
 fetch_tags() {
-  # Not -q: git reports a moved tag ("would clobber existing tag") only in its normal output.
-  git -C "$REPO_DIR" fetch --tags origin >/dev/null 2>"$TMP_DIR/fetch.err" && return 0
-  if grep -q 'would clobber existing tag' "$TMP_DIR/fetch.err"; then
-    sed 's/^/  /' "$TMP_DIR/fetch.err" >&2
-    die "远端有发布标签被移动到了其他提交。正式版本的标签不应改变，已停止；请先核实仓库是否被篡改。网站没有受到影响"
-  fi
-  die "无法从 origin 获取标签（$(grep -m 1 -iE 'fatal|error' "$TMP_DIR/fetch.err" || head -n 1 "$TMP_DIR/fetch.err")）。网站没有受到影响"
+  local rc=0
+  fetch_release_tags || rc=$?
+  case "$rc" in
+    0) ;;
+    2) die "远端发布标签指向的提交与本地不同：$TAG_CONFLICTS。正式版本的标签不应改变，已停止；请先核实仓库是否被篡改。网站没有受到影响";;
+    *) die "无法从 origin 获取标签（${FETCH_ERROR:-未知错误}）。网站没有受到影响";;
+  esac
 }
 
 confirm() {  # confirm PROMPT EXPECTED

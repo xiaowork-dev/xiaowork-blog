@@ -219,6 +219,39 @@ release_tags_at() {
   git -C "$REPO_DIR" tag --points-at "${1:?}" 2>/dev/null | grep -E "$RELEASE_TAG_RE" || true
 }
 
+# fetch_release_tags: git fetch --tags from origin. git refuses ("would clobber existing tag") to replace a
+# local tag by a different tag object. That also happens when only the object differs — e.g. a CI checkout
+# creates a lightweight local tag for an annotated remote tag — so each refused tag is compared by the commit
+# it points to: the same commit means the local tag is replaced by the remote one; a different commit means
+# the published tag was moved and is refused.
+# Returns 0 on success, 1 when origin cannot be reached (FETCH_ERROR), 2 when a tag was moved (TAG_CONFLICTS).
+# shellcheck disable=SC2034  # FETCH_ERROR / TAG_CONFLICTS are read by the calling script (manage.sh, update.sh)
+fetch_release_tags() {
+  local err tag rejected local_commit remote_commit
+  FETCH_ERROR=""; TAG_CONFLICTS=""
+  err="$(git -C "$REPO_DIR" fetch --tags origin 2>&1 >/dev/null)" && return 0
+  rejected="$(printf '%s\n' "$err" | awk '/would clobber existing tag/ { for (i = 1; i <= NF; i++) if ($i == "[rejected]") { print $(i + 1); break } }')"
+  if [ -z "$rejected" ]; then
+    FETCH_ERROR="$(printf '%s\n' "$err" | grep -m 1 -iE 'fatal|error' || printf '%s\n' "$err" | head -n 1)"
+    return 1
+  fi
+  for tag in $rejected; do
+    local_commit="$(git -C "$REPO_DIR" rev-parse -q --verify "refs/tags/$tag^{commit}" 2>/dev/null || true)"
+    remote_commit="$(git -C "$REPO_DIR" ls-remote origin "refs/tags/$tag^{}" 2>/dev/null | cut -f1 || true)"
+    [ -n "$remote_commit" ] || remote_commit="$(git -C "$REPO_DIR" ls-remote origin "refs/tags/$tag" 2>/dev/null | cut -f1 || true)"
+    if [ -n "$local_commit" ] && [ "$local_commit" = "$remote_commit" ]; then
+      git -C "$REPO_DIR" fetch -q origin "+refs/tags/$tag:refs/tags/$tag" 2>/dev/null \
+        || { FETCH_ERROR="无法更新本地标签 $tag"; return 1; }
+    else
+      TAG_CONFLICTS="${TAG_CONFLICTS:+$TAG_CONFLICTS }$tag(本地 ${local_commit:0:12} / 远端 ${remote_commit:0:12})"
+    fi
+  done
+  [ -z "$TAG_CONFLICTS" ] || return 2
+  err="$(git -C "$REPO_DIR" fetch --tags origin 2>&1 >/dev/null)" && return 0
+  FETCH_ERROR="$(printf '%s\n' "$err" | head -n 1)"
+  return 1
+}
+
 # pinned_tag_ok TAG: false when TAG was deployed here before and now resolves to a different commit.
 pinned_tag_ok() {
   local pinned now
