@@ -25,6 +25,8 @@ type Guard interface {
 	RateLimit(ctx context.Context, action string, limit int, window time.Duration, subject string) error
 	VisitorKey(r *http.Request) (string, bool)
 	ClientIP(r *http.Request) string
+	// RequireUser rejects requests without a valid session (bookmarks, P8-B12).
+	RequireUser(next http.Handler) http.Handler
 }
 
 const (
@@ -59,6 +61,7 @@ func (s *Service) PublicRoutes(r chi.Router) {
 	r.Get("/tags", s.handle(s.publicTags))
 	r.Get("/tags/{slug}/articles", s.handle(s.tagArticles))
 	r.Get("/archives", s.handle(s.archives))
+	s.bookmarkRoutes(r)
 }
 
 // GET /articles?page=&page_size=&category=&tag=&sort=latest|oldest
@@ -232,7 +235,9 @@ func (s *Service) writeSummaries(w http.ResponseWriter, r *http.Request, rows []
 	for k, v := range extra {
 		meta[k] = v
 	}
-	w.Header().Set("Cache-Control", publicCacheValue)
+	if w.Header().Get("Cache-Control") == "" { // personal lists (bookmarks) set private, no-store first
+		w.Header().Set("Cache-Control", publicCacheValue)
+	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"data": items, "meta": meta})
 	return nil
 }

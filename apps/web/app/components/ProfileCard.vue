@@ -1,12 +1,22 @@
 <script setup lang="ts">
-// Left profile column (UI/UX §0.1 #2): avatar, name, short bio and configured link icons — nothing else.
-import { safeExternalUrl } from '~/utils/public'
+// Left profile column (UI/UX §0.1 #2): avatar, name, short bio and configured link icons.
+// P8-B12 (approved mock-up): followed by the site's internal navigation — a vertical menu on desktop and a
+// row of tabs on narrow screens. It reuses the navigation configured for the header, nothing new.
+import { safeExternalUrl, safeInternalPath } from '~/utils/public'
 
-const { site } = await useSite()
+const { site, navigation } = await useSite()
+const route = useRoute()
 const profile = computed(() => site.value.profile)
 const links = computed(() => site.value.social_links.filter(l => safeExternalUrl(l.url)))
+const navLinks = computed(() => navigation.value.filter(l => l.link_type === 'INTERNAL' && safeInternalPath(l.url)))
 const initial = computed(() => Array.from(profile.value.name.trim())[0]?.toUpperCase() ?? 'X')
 const knownIcons = ['github', 'mail', 'rss', 'link']
+const NAV_ICONS: Record<string, string> = { '/': 'home', '/archives': 'archive', '/about': 'info', '/categories': 'folder', '/tags': 'tag', '/search': 'search' }
+const navIcon = (url: string) => NAV_ICONS[url] ?? 'link'
+function isActive(url: string): boolean {
+  if (url === '/') return route.path === '/'
+  return route.path === url || route.path.startsWith(url + '/')
+}
 // A missing avatar file falls back to the initial (also when it failed before hydration).
 const avatarFailed = ref(false)
 const avatarImg = ref<HTMLImageElement | null>(null)
@@ -32,5 +42,13 @@ onMounted(() => {
         </a>
       </li>
     </ul>
+    <nav v-if="navLinks.length" class="profile-nav" aria-label="博客导航">
+      <NuxtLink
+        v-for="l in navLinks" :key="l.id" :to="l.url" :class="{ active: isActive(l.url) }"
+        :aria-current="isActive(l.url) ? 'page' : undefined"
+      >
+        <SiteIcon :name="navIcon(l.url)" :size="17" />{{ l.label }}
+      </NuxtLink>
+    </nav>
   </aside>
 </template>

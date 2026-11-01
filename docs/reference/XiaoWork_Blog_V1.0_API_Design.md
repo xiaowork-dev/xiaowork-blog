@@ -116,7 +116,7 @@ Nginx Proxy Manager（唯一公网入口）
 ### 3.4 Cookie、Session、CSRF、缓存
 
 1. 登录成功由 Go 返回 `Set-Cookie: __Host-blog_session=<random>; Path=/; Secure; HttpOnly; SameSite=Lax`；生产环境仅 HTTPS。Cookie 令牌是高熵随机值，数据库只存摘要；没有 `Domain` 属性。
-2. **建议默认**：普通 Session 绝对过期 14 天；未提供“记住我”功能。后端在所有受保护请求检查未过期、未撤销以及账号状态。登录成功轮换会话凭据。
+2. **建议默认**：普通 Session 绝对过期 14 天（`SESSION_TTL`）。P8-B12 起登录可传 `remember_me`：省略或 `true` 为 14 天持久 Cookie；`false` 时 Cookie 不带 Max-Age（随浏览器会话结束），服务器端会话最长 12 小时。后端在所有受保护请求检查未过期、未撤销以及账号状态。登录成功轮换会话凭据。
 3. `GET /auth/csrf` 为同源浏览器提供一个与匿名/已登录安全上下文绑定的防 CSRF 令牌；变更型请求携带 `X-CSRF-Token`。可使用**签名的双提交 Cookie**方案，实现时必须绑定对应会话/匿名上下文并在登录后轮换。所有状态修改还需进行 `Origin` 校验；同源策略与 `SameSite` 仅为纵深防御。
 4. Nuxt 可从 Go 获取 CSRF Token 并用于后续写请求；**不要**把 Session Cookie 值放入 JS、localStorage、日志或 SSR 公共 payload。
 5. **无变更 GET**：邮箱链接先进入 Nuxt 确认页，由用户确认后发 POST 消费令牌，避免邮件安全网关预读取链接触发误操作。
@@ -151,6 +151,7 @@ Nginx Proxy Manager（唯一公网入口）
 | GET | `/articles/{article_id}/comments` | 顶层评论分页 | `sort=latest/oldest` |
 | GET | `/comments/{root_id}/replies` | 单棵评论树下回复分页 | 限制每页数量 |
 | POST | `/articles/{article_id}/views` | 浏览量近似计数事件 | `P`，限流与防爬，`204` |
+| GET | `/articles/{article_id}/related` | 相关文章（P8-B12） | 最多 3 篇：共享标签 ×2 + 同分类 ×1 排序，不足时按最新补齐；文章非公开时 404 |
 
 ### 4.2 注册、认证、个人中心（T / S）
 
@@ -172,6 +173,10 @@ Nginx Proxy Manager（唯一公网入口）
 | POST | `/me/change-email/request` | 向新邮箱发送更改确认链接 | S |
 | POST | `/me/change-email/confirm` | 消费新邮箱确认令牌 | S，必须有有效 Session 与 CSRF |
 | GET | `/me/comments` | 我的评论列表 | S |
+| GET | `/me/bookmarks` | 我的收藏（P8-B12），仅当前公开的文章，按收藏时间倒序 | S，`private, no-store` |
+| GET | `/me/bookmarks/ids` | 我收藏的公开文章 ID（用于标记卡片） | S |
+| PUT | `/me/bookmarks/{article_id}` | 收藏（幂等），仅公开文章，上限 1000 篇 | S，每用户每分钟 60 次 |
+| DELETE | `/me/bookmarks/{article_id}` | 取消收藏（幂等） | S |
 | DELETE | `/comments/{comment_id}` | 删除自己的评论，保留墓碑 | S，所有权检查 |
 | POST | `/articles/{article_id}/comments` | 新增顶层评论 | U |
 | POST | `/comments/{comment_id}/replies` | 回复指定评论 | U |

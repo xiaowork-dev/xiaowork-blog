@@ -230,7 +230,11 @@ log(r.status === 200 && title(html) === `从零搭建博客 SEO 标题 ${run} ·
 log(meta(html, 'name', 'description') === `SEO 描述：Nuxt 与 Go 的博客实践 ${run}` && canonical(html) === `${WEB}/posts/${special}`, 'article description and canonical')
 log(meta(html, 'property', 'og:type') === 'article' && meta(html, 'property', 'og:image') === `${WEB}${cover.url}` && meta(html, 'property', 'og:url') === `${WEB}/posts/${special}` && !!meta(html, 'property', 'article:published_time'), 'Open Graph tags (type, url, absolute cover image, published time)')
 log(html.includes('"@type":"BlogPosting"'), 'JSON-LD BlogPosting present')
-log(html.includes('以上就是本文的全部内容') && html.includes('<h2 id="项目背景">') && html.includes('class="toc-side"') && html.includes('href="#技术选型"'), 'SSR body is indexable, headings have anchors, TOC rendered')
+{
+  // The TOC is server-rendered in the article sidebar (P8-B12: class="side-card toc-side").
+  const checks = { body: html.includes('以上就是本文的全部内容'), anchor: html.includes('<h2 id="项目背景">'), toc: /class="[^"]*toc-side/.test(html), tocLink: html.includes('href="#技术选型"') }
+  log(Object.values(checks).every(Boolean), `SSR body is indexable, headings have anchors, TOC rendered ${JSON.stringify(checks)}`)
+}
 log(html.includes('class="code-copy"') && html.includes('class="shiki') && html.includes('class="md-table"') && /<img[^>]*loading="lazy"/.test(html), 'code highlight + copy button, table wrapper, lazy images')
 log(html.includes(`/tags/go-${run}`) && html.includes('rel="prev"') && html.includes('次阅读'), 'tags, previous-article link and view count shown')
 log(html.includes('id="comments"') && !html.includes('class="comment-thread"'), 'comment section present; comments load in the browser (nothing pre-rendered or faked by SSR)')

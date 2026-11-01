@@ -13,13 +13,13 @@
 mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius: 3px }
 
 /* ---- header ---- */
-.site-header { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--card) 92%, transparent); border-bottom: 1px solid var(--border); backdrop-filter: saturate(1.4) blur(8px) }
-.site-header-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 24px }
-.site-header .brand { font-size: 19px; font-weight: 750; color: var(--text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.site-header { position: sticky; top: 0; z-index: 30; background: var(--header-bg); border-bottom: 1px solid var(--border); backdrop-filter: saturate(1.4) blur(8px) }
+.site-header-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 28px }
+.site-header .brand { display: inline-flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 750; color: var(--text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
 .main-nav { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0 }
-.main-nav a { padding: 8px 12px; border-radius: 8px; color: var(--muted); font-size: 15px; text-decoration: none; white-space: nowrap }
+.main-nav a { padding: 7px 12px; border-radius: 8px; color: var(--muted); font-size: 15px; text-decoration: none; white-space: nowrap }
 .main-nav a:hover { color: var(--text); background: var(--bg) }
-.main-nav a.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent) }
+.main-nav a.active { color: var(--accent); background: var(--accent-soft); font-weight: 600 }
 .header-tools { display: flex; align-items: center; gap: 4px; margin-left: auto }
 .account-links { display: flex; align-items: center; gap: 12px; margin-left: 8px; font-size: 15px }
 .account-links a { text-decoration: none }
@@ -46,28 +46,25 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 .blog-side { position: sticky; top: 88px; max-height: calc(100vh - 104px); overflow-y: auto }
 .blog-main { min-width: 0 }
 .blog-main:focus { outline: none; box-shadow: none }
-/* Profile card (P8-B8): a soft tinted band behind the avatar — the only gradient area on the page — then
-   name, bio and outlined link buttons. Content order and fields are unchanged (UI/UX §0.1 #2). */
+/* Profile card (P8-B12, approved mock-up): centred avatar, name, bio, plain social icons, then the site
+   navigation as a vertical menu (a row of tabs on narrow screens). */
 .profile-card {
-  position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 30px 20px 24px; text-align: center; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 28px 18px 14px; text-align: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
 }
-.profile-card::before {
-  content: ""; position: absolute; inset: 0 0 auto; height: 76px; pointer-events: none;
-  background: var(--profile-band);
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-}
-.profile-card > * { position: relative }
-.profile-avatar { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; background: var(--accent-soft); border: 3px solid var(--card); box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(15, 23, 42, .10) }
-.profile-avatar-text { display: grid; place-items: center; color: var(--accent); font-size: 34px; font-weight: 800 }
-.profile-name { margin: 10px 0 0; font-size: 20px; font-weight: 750; line-height: 1.4; letter-spacing: .01em; overflow-wrap: anywhere }
-.profile-bio { margin: 2px 0 0; max-width: 22em; color: var(--muted); font-size: 14px; line-height: 1.75; overflow-wrap: anywhere }
-.profile-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none }
-.profile-links a {
-  display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; color: var(--muted);
-  background: var(--card); border: 1px solid var(--border); transition: color .15s, border-color .15s, background-color .15s;
-}
-.profile-links a:hover, .profile-links a:focus-visible { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-border) }
+.profile-avatar { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; background: var(--accent-soft); box-shadow: 0 0 0 1px var(--border) }
+.profile-avatar-text { display: grid; place-items: center; color: var(--accent); font-size: 32px; font-weight: 800 }
+.profile-name { margin: 10px 0 0; font-size: 19px; font-weight: 750; line-height: 1.4; overflow-wrap: anywhere }
+.profile-bio { margin: 0; max-width: 22em; color: var(--muted); font-size: 13.5px; line-height: 1.7; overflow-wrap: anywhere }
+.profile-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none }
+.profile-links a { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; color: var(--text); transition: color .15s, background-color .15s }
+.profile-links a:hover, .profile-links a:focus-visible { color: var(--accent); background: var(--accent-soft) }
+.profile-nav { align-self: stretch; display: grid; gap: 2px; margin: 14px -4px 0; padding-top: 12px; border-top: 1px solid var(--border); text-align: left }
+.profile-nav a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; color: var(--text); font-size: 15px; text-decoration: none }
+.profile-nav a:hover { background: var(--bg) }
+.profile-nav a .icon { color: var(--muted) }
+.profile-nav a.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; box-shadow: inset 3px 0 0 var(--accent) }
+.profile-nav a.active .icon { color: var(--accent) }
 
 .site-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; padding: 24px 16px 32px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--border) }
 .site-footer a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none }
@@ -75,8 +72,7 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 .shell { flex: 1; width: 100% }
 
 /* ---- section headings and states ---- */
-.section-title { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; font-size: 24px; line-height: 1.35 }
-.section-title::before { content: ""; flex: none; width: 4px; height: 1em; border-radius: 4px; background: var(--title-bar) }
+.section-title { margin: 0 0 14px; font-size: 21px; font-weight: 750; line-height: 1.4 }
 .section-desc { margin: -8px 0 16px; color: var(--muted); font-size: 14px }
 .breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--muted); font-size: 14px }
 .breadcrumb a { color: var(--muted); text-decoration: none }
@@ -95,61 +91,56 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 .skeleton-line.w60 { width: 60%; height: 20px } .skeleton-line.w90 { width: 90% } .skeleton-line.w40 { width: 40% }
 
 /* ---- article cards ---- */
-/* Article cards (P8-B8). Cover: fixed 16:9 box (no layout shift), tinted placeholder while loading or when the
-   image fails. Hover: border + soft shadow + a 2px brand line on top; no movement of the card itself. */
-.article-list { display: grid; gap: 18px }
+/* P8-B12 (approved mock-up): compact cards — cover on the left (16:10, fixed box so nothing jumps), title,
+   two-line summary, the category as a blue chip followed by grey tag chips, then date, views and the
+   bookmark button. Hover: border and a soft shadow, no movement. */
+.article-list { display: grid; gap: 14px }
 .article-card {
-  position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; padding: 20px 22px;
-  background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
   transition: border-color .18s, box-shadow .18s;
 }
-.article-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: var(--brand-gradient); opacity: 0; transition: opacity .18s }
 .article-card:hover, .article-card:focus-within { border-color: var(--accent-border); box-shadow: var(--shadow-hover) }
-.article-card:hover::before, .article-card:focus-within::before { opacity: 1 }
-.article-card.has-cover { grid-template-columns: 256px minmax(0, 1fr); align-items: start }
-.card-cover {
-  display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; color: var(--muted);
-  background: linear-gradient(135deg, var(--accent-soft), var(--teal-soft));
-}
+.article-card.has-cover { grid-template-columns: 220px minmax(0, 1fr); align-items: start }
+.card-cover { display: grid; place-items: center; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 8px; color: var(--muted); background: var(--bg) }
 .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s ease }
 .article-card:hover .card-cover img { transform: scale(1.03) }
 .card-cover.is-broken { border: 1px dashed var(--border-strong) }
-.card-body { display: flex; flex-direction: column; gap: 8px; min-width: 0 }
-.card-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font-size: 13px }
-.card-kicker time { font-variant-numeric: tabular-nums }
-.card-category {
-  display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12.5px; font-weight: 600; line-height: 24px;
-  color: var(--text); text-decoration: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; white-space: nowrap;
-}
-.card-category::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--amber) }
-a.card-category:hover { color: var(--accent); border-color: var(--accent-border); background: var(--accent-soft) }
-.card-category.is-none { color: var(--muted); font-weight: 500 }
-.card-category.is-none::before { background: var(--border-strong) }
-.card-title { margin: 2px 0 0; font-size: 20px; font-weight: 700; line-height: 1.45; letter-spacing: .01em; overflow-wrap: anywhere }
+.card-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; align-self: stretch }
+.card-title { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere }
 .card-title a { color: var(--text); text-decoration: none }
 .card-title a:hover { color: var(--accent) }
 .card-summary {
-  margin: 0; color: var(--muted); font-size: 15px; line-height: 1.75; overflow-wrap: anywhere;
-  display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.article-card.has-cover .card-summary { -webkit-line-clamp: 2; line-clamp: 2 }
-.card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 4px }
-.card-views { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums }
-.post-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; color: var(--muted); font-size: 13px }
+.article-card:not(.has-cover) .card-summary { -webkit-line-clamp: 3; line-clamp: 3 }
+.card-meta { display: flex; align-items: center; gap: 6px; margin-top: auto; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums }
+.card-dot { color: var(--border-strong) }
+.card-bookmark { margin-left: auto }
+.post-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--muted); font-size: 13.5px }
 .post-meta > * { display: inline-flex; align-items: center; gap: 4px }
 .post-meta a { color: var(--muted); text-decoration: none }
 .post-meta a:hover { color: var(--accent) }
 .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none }
 .tag-pill {
-  display: inline-block; padding: 0 10px; font-size: 12.5px; line-height: 24px; color: var(--accent); background: var(--accent-soft);
-  border: 1px solid transparent; border-radius: 999px; text-decoration: none; overflow-wrap: anywhere; transition: border-color .15s;
+  display: inline-block; padding: 0 8px; font-size: 12px; line-height: 22px; color: var(--tag-fg); background: var(--tag-bg);
+  border: 1px solid transparent; border-radius: 6px; text-decoration: none; overflow-wrap: anywhere; transition: color .15s, border-color .15s;
 }
-.tag-pill.tone-1 { color: var(--teal); background: var(--teal-soft) }
-.tag-pill.tone-2 { color: var(--amber); background: var(--amber-soft) }
-.tag-pill.tone-3 { color: var(--violet); background: var(--violet-soft) }
-.tag-pill:hover { border-color: currentColor }
-.tag-pill-large { padding: 6px 14px; font-size: 15px }
+.tag-pill.is-category { color: var(--chip-fg); background: var(--chip-bg); font-weight: 600 }
+.tag-pill:hover { color: var(--accent); border-color: var(--accent-border) }
+.tag-pill-large { padding: 4px 12px; font-size: 14px; border-radius: 8px }
 .tag-count { color: var(--muted); font-size: 13px }
+.bookmark-button {
+  display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--muted);
+  background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer;
+}
+.bookmark-button:hover { color: var(--accent); background: var(--accent-soft) }
+.bookmark-button[aria-pressed="true"] { color: var(--accent) }
+.bookmark-button[aria-pressed="true"] svg path { fill: currentColor }
+.bookmark-button:disabled { opacity: .6; cursor: progress }
+.bookmark-button.with-label { display: inline-flex; gap: 4px; width: auto; height: 30px; padding: 0 10px; font: inherit; font-size: 13px; border-color: var(--border) }
+.bookmark-button.with-label[aria-pressed="true"] { border-color: var(--accent-border); background: var(--accent-soft) }
 
 /* ---- pager ---- */
 .pager-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 28px }
@@ -159,7 +150,7 @@ a.card-category:hover { color: var(--accent); border-color: var(--accent-border)
 }
 .pager-nav a { color: var(--text); background: var(--card); border: 1px solid var(--border) }
 .pager-nav a:hover { border-color: var(--accent); color: var(--accent) }
-.pager-current { color: var(--on-accent); background: var(--accent); font-weight: 650 }
+.pager-current { color: var(--btn-fg); background: var(--btn-bg); font-weight: 650 }
 .pager-step.disabled { color: var(--muted); opacity: .55 }
 .pager-gap { color: var(--muted); min-width: 24px; padding: 0 }
 
@@ -193,16 +184,22 @@ a.card-category:hover { color: var(--accent); border-color: var(--accent-border)
 .search-hint { margin: 8px 0 20px }
 
 /* ---- article page ---- */
-.post-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; align-items: start }
-.post-layout.has-toc { grid-template-columns: minmax(0, 1fr) 184px; gap: 28px }
-.post-article { min-width: 0; padding: 36px 40px 40px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow) }
-.post-title { margin: 6px 0 14px; font-size: 32px; font-weight: 750; line-height: 1.35; letter-spacing: .01em; overflow-wrap: anywhere }
-.post-meta .card-category { color: var(--text) }
+/* P8-B12: own shell (layouts/post.vue) — the article plus a right sidebar with the table of contents and
+   related articles; below 1024 px the sidebar moves inline (TOC on top, related below the article). */
+.post-shell { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 28px 24px 56px }
+.post-shell:focus { outline: none; box-shadow: none }
+.post-layout { display: grid; grid-template-columns: minmax(0, 1fr) 272px; gap: 24px; align-items: start }
+.post-main { min-width: 0 }
+.post-article { min-width: 0; padding: 32px 36px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow) }
+.post-title { margin: 4px 0 10px; font-size: 28px; font-weight: 750; line-height: 1.4; overflow-wrap: anywhere }
+.post-meta .post-category { color: var(--accent) }
+.post-bookmark { margin-left: auto }
+.post-tags { margin-top: 12px }
 .post-summary {
-  margin: 18px 0 0; padding: 12px 16px; color: var(--muted); font-size: 15.5px; line-height: 1.8;
-  background: var(--bg); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0;
+  margin: 16px 0 0; padding: 10px 14px; color: var(--muted); font-size: 15px; line-height: 1.8;
+  background: var(--bg); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
 }
-.post-cover { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; margin: 22px 0 0; border-radius: 12px; border: 1px solid var(--border); background: var(--bg) }
+.post-cover { display: block; width: 100%; height: auto; aspect-ratio: 21 / 9; object-fit: cover; margin: 20px 0 0; border-radius: 10px; border: 1px solid var(--border); background: var(--bg) }
 .post-body { margin-top: 30px; font-size: 17px; line-height: 1.85 }
 .post-footer { display: grid; gap: 20px; margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border) }
 .post-neighbours { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
@@ -212,18 +209,27 @@ a.card-category:hover { color: var(--accent); border-color: var(--accent-border)
 .neighbour.placeholder { border: 0 }
 .neighbour-label { color: var(--muted); font-size: 13px }
 .neighbour-title { font-weight: 600; overflow-wrap: anywhere }
-.toc-side { position: sticky; top: 88px; max-height: calc(100vh - 110px); overflow-y: auto; padding: 4px 0 }
-.toc-title { margin: 0 0 8px; font-size: 14px; font-weight: 650 }
-.toc-list { margin: 0; padding: 0; list-style: none; border-left: 2px solid var(--border) }
-.toc-list a { display: block; padding: 4px 10px; margin-left: -2px; border-left: 2px solid transparent; color: var(--muted); font-size: 13px; line-height: 1.5; text-decoration: none; overflow-wrap: anywhere }
-.toc-list .toc-l3 a { padding-left: 22px }
+.post-side { position: sticky; top: 84px; display: grid; gap: 16px; max-height: calc(100vh - 100px); overflow-y: auto }
+.side-card { padding: 16px 16px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow) }
+.side-title { margin: 0 0 10px; font-size: 15px; font-weight: 700 }
+.toc-list { margin: 0; padding: 0; list-style: none }
+.toc-list a { display: block; padding: 5px 10px; border-left: 2px solid transparent; color: var(--muted); font-size: 13.5px; line-height: 1.5; text-decoration: none; overflow-wrap: anywhere }
+.toc-list .toc-l3 a { padding-left: 22px; font-size: 13px }
 .toc-list a:hover { color: var(--text) }
 .toc-list .active a { color: var(--accent); border-left-color: var(--accent); font-weight: 600 }
+.related-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none }
+.related-item { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; align-items: center; color: var(--text); text-decoration: none }
+.related-thumb { display: grid; place-items: center; width: 72px; aspect-ratio: 3 / 2; overflow: hidden; border-radius: 6px; color: var(--muted); background: var(--bg) }
+.related-thumb img { width: 100%; height: 100%; object-fit: cover; display: block }
+.related-text { display: grid; gap: 2px; min-width: 0 }
+.related-title { font-size: 13.5px; font-weight: 600; line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical }
+.related-item:hover .related-title { color: var(--accent) }
+.related-text time { color: var(--muted); font-size: 12px }
 .toc-inline { display: none; margin: 20px 0 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg) }
 .toc-inline summary { display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600; font-size: 15px }
 .toc-inline .toc-list { margin-top: 8px }
 .reading-progress { position: fixed; left: 0; right: 0; top: 0; z-index: 35; height: 3px; pointer-events: none }
-.reading-progress span { display: block; height: 100%; background: var(--brand-gradient); transform-origin: 0 50%; transform: scaleX(0); transition: transform .1s linear }
+.reading-progress span { display: block; height: 100%; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); transition: transform .1s linear }
 .back-to-top { position: fixed; right: 20px; bottom: 24px; z-index: 25; background: var(--card); border-color: var(--border); box-shadow: 0 4px 14px rgba(0, 0, 0, .12) }
 .post-error { padding-top: 8px }
 
@@ -258,40 +264,43 @@ a.card-category:hover { color: var(--accent); border-color: var(--accent-border)
 .error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 16px }
 
 /* ---- responsive ---- */
-@media (max-width: 1279px) {
-  .post-layout.has-toc { grid-template-columns: minmax(0, 1fr) }
-  .toc-side { display: none }
-  .toc-inline { display: block }
-}
 @media (max-width: 1199px) {
   .blog-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 28px }
-  .article-card.has-cover { grid-template-columns: 208px minmax(0, 1fr); gap: 18px }
+  .article-card.has-cover { grid-template-columns: 188px minmax(0, 1fr); gap: 16px }
+  .post-layout { grid-template-columns: minmax(0, 1fr) 236px }
   .post-article { padding: 28px 28px 32px }
 }
 @media (max-width: 1023px) {
   .blog-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 20px }
   .blog-side { position: static; max-height: none; overflow: visible }
-  .profile-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-areas: "avatar name" "avatar bio" "avatar links"; column-gap: 16px; row-gap: 2px; padding: 18px 18px 16px; text-align: left; align-items: center }
-  .profile-card::before { height: 3px; border: 0; background: var(--brand-gradient) }
-  .profile-avatar { grid-area: avatar; width: 64px; height: 64px; align-self: start; border-width: 2px }
-  .profile-bio { max-width: none }
-  .profile-avatar-text { font-size: 26px }
-  .profile-name { grid-area: name; margin: 0; font-size: 18px }
-  .profile-bio { grid-area: bio }
-  .profile-links { grid-area: links; justify-content: flex-start; gap: 6px; margin: 8px 0 0 }
-  .profile-links a { width: 34px; height: 34px }
+  .profile-card { padding: 22px 16px 0 }
+  .profile-avatar { width: 72px; height: 72px }
+  .profile-avatar-text { font-size: 28px }
+  .profile-name { font-size: 18px }
+  /* The menu becomes a row of tabs along the bottom of the card. */
+  .profile-nav { display: flex; justify-content: center; gap: 4px; margin: 12px -16px 0; padding: 0 8px; border-top: 1px solid var(--border) }
+  .profile-nav a { gap: 0; padding: 10px 14px; border-radius: 0; font-size: 14.5px; box-shadow: none }
+  .profile-nav a .icon { display: none }
+  .profile-nav a.active { background: transparent; box-shadow: inset 0 -2px 0 var(--accent) }
+  .post-layout { grid-template-columns: minmax(0, 1fr) }
+  /* The sidebar flows below the article; its TOC card is replaced by the inline TOC at the top. */
+  .post-side { position: static; max-height: none; overflow: visible }
+  .post-side .toc-side { display: none }
+  .toc-inline { display: block }
 }
 @media (max-width: 767px) {
   .site-header-inner { padding: 0 12px 0 16px; gap: 8px; height: 56px }
   .main-nav, .account-links { display: none }
   .menu-button { display: inline-grid }
   .blog-layout { padding: 16px 16px 40px }
-  .article-card { padding: 16px; gap: 14px }
+  .article-card { padding: 12px; gap: 12px }
   .article-card.has-cover { grid-template-columns: minmax(0, 1fr) }
-  .article-card.has-cover .card-summary { -webkit-line-clamp: 3; line-clamp: 3 }
-  .card-title { font-size: 18px }
-  .post-article { padding: 22px 16px 26px; border-radius: 14px }
-  .post-title { font-size: 25px }
+  .card-cover { aspect-ratio: 16 / 9 }
+  .card-title { font-size: 16.5px }
+  .post-cover { aspect-ratio: 16 / 9 }
+  .post-shell { padding: 16px 12px 40px }
+  .post-article { padding: 20px 16px 24px; border-radius: 12px }
+  .post-title { font-size: 23px }
   .post-summary { font-size: 15px }
   .post-body { font-size: 16px }
   .post-neighbours { grid-template-columns: minmax(0, 1fr) }

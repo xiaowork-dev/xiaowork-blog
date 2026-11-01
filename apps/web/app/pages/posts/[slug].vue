@@ -3,10 +3,10 @@
 // an HTTP 301 from SSR; drafts, withdrawn and trashed articles are a 404. Comments (P6) are loaded in
 // the browser by <CommentSection>, so the article HTML is the same for every reader.
 import { useDocumentRenderer } from '~/composables/useMarkdown'
-import { formatDay, isoDay, tagTone, type PublicArticle } from '~/utils/public'
+import { formatDay, isoDay, type PublicArticle } from '~/utils/public'
 import type { TocEntry } from '~/utils/markdown'
 
-definePageMeta({ layout: 'blog' })
+definePageMeta({ layout: 'post' })
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -155,23 +155,34 @@ useHead(() => {
       <NuxtLink to="/" class="button button-small button-secondary">返回首页</NuxtLink>
     </StateBlock>
   </div>
-  <div v-else-if="article" class="post-layout" :class="{ 'has-toc': rendered.toc.length > 1 }">
+  <div v-else-if="article" class="post-layout">
     <div class="reading-progress" aria-hidden="true"><span :style="{ transform: `scaleX(${progress})` }" /></div>
     <div class="post-main">
       <article class="post-article" aria-labelledby="post-title">
         <header class="post-header">
           <nav class="breadcrumb" aria-label="面包屑">
-            <NuxtLink to="/">首页</NuxtLink><span aria-hidden="true">/</span>
+            <NuxtLink to="/">首页</NuxtLink><span aria-hidden="true">›</span>
             <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`">{{ article.category.name }}</NuxtLink>
             <span v-else>未分类</span>
           </nav>
           <h1 id="post-title" class="post-title">{{ article.title }}</h1>
           <div class="post-meta">
-            <NuxtLink v-if="article.category" :to="`/categories/${article.category.slug}`" class="card-category">{{ article.category.name }}</NuxtLink>
-            <span><SiteIcon name="calendar" :size="15" />发布于 <time :datetime="article.first_published_at">{{ formatDay(article.first_published_at) }}</time></span>
-            <span v-if="updatedLater">更新于 <time :datetime="article.public_updated_at">{{ formatDay(article.public_updated_at) }}</time></span>
-            <span :aria-label="`阅读 ${article.view_count} 次`"><SiteIcon name="eye" :size="15" />{{ article.view_count }} 次阅读</span>
+            <time :datetime="article.first_published_at">{{ formatDay(article.first_published_at) }}</time>
+            <template v-if="updatedLater">
+              <span class="card-dot" aria-hidden="true">·</span>
+              <span>更新于 <time :datetime="article.public_updated_at">{{ formatDay(article.public_updated_at) }}</time></span>
+            </template>
+            <span class="card-dot" aria-hidden="true">·</span>
+            <span :aria-label="`阅读 ${article.view_count} 次`">{{ article.view_count }} 次阅读</span>
+            <template v-if="article.category">
+              <span class="card-dot" aria-hidden="true">·</span>
+              <NuxtLink :to="`/categories/${article.category.slug}`" class="post-category">{{ article.category.name }}</NuxtLink>
+            </template>
+            <BookmarkButton :article-id="article.id" with-label class="post-bookmark" />
           </div>
+          <ul v-if="article.tags.length" class="tag-list post-tags" aria-label="文章标签">
+            <li v-for="t in article.tags" :key="t.id"><NuxtLink :to="`/tags/${t.slug}`" class="tag-pill">{{ t.name }}</NuxtLink></li>
+          </ul>
           <p v-if="article.summary" class="post-summary">{{ article.summary }}</p>
           <!-- Header image; skipped when the body already shows the same picture, so it never appears twice. -->
           <img v-if="showCover" :src="article.cover!.url" alt="" class="post-cover" width="1280" height="720" decoding="async" fetchpriority="high">
@@ -185,9 +196,6 @@ useHead(() => {
         <div ref="body" class="md-body post-body" v-html="rendered.html" />
 
         <footer class="post-footer">
-          <ul v-if="article.tags.length" class="tag-list" aria-label="文章标签">
-            <li v-for="t in article.tags" :key="t.id"><NuxtLink :to="`/tags/${t.slug}`" class="tag-pill" :class="`tone-${tagTone(t.slug)}`">#{{ t.name }}</NuxtLink></li>
-          </ul>
           <nav class="post-neighbours" aria-label="上一篇和下一篇">
             <NuxtLink v-if="article.previous_article" :to="article.previous_article.canonical_path" class="neighbour prev" rel="prev">
               <span class="neighbour-label">上一篇</span><span class="neighbour-title">{{ article.previous_article.title }}</span>
@@ -202,9 +210,12 @@ useHead(() => {
       <CommentSection :article-id="article.id" :comments-enabled="article.comments_enabled" />
     </div>
 
-    <aside v-if="rendered.toc.length > 1" class="toc-side" aria-label="文章目录">
-      <p class="toc-title">目录</p>
-      <ArticleToc :toc="rendered.toc" :active-id="activeId" />
+    <aside class="post-side" aria-label="目录与相关文章">
+      <section v-if="rendered.toc.length > 1" class="side-card toc-side" aria-labelledby="toc-title">
+        <h2 id="toc-title" class="side-title">目录</h2>
+        <ArticleToc :toc="rendered.toc" :active-id="activeId" />
+      </section>
+      <RelatedArticles :article-id="article.id" />
     </aside>
 
     <button v-show="showTop" type="button" class="back-to-top icon-button" aria-label="返回顶部" title="返回顶部" @click="toTop">

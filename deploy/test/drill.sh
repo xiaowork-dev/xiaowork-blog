@@ -9,7 +9,7 @@
 #                              SNAPSHOT_SRC=/path: snapshot another tree (e.g. an older release) instead of /src
 #   drill.sh configure         fill deploy/.env for the drill (https://localhost:18443, mail catcher)
 #   drill.sh scenario NAME     push a scenario commit to the drill origin:
-#                                migration      – adds an additive goose migration (schema 8)
+#                                migration      – adds an additive goose migration (schema 90)
 #                                broken-api     – api image whose entrypoint exits (health check fails)
 #                                fix-api        – reverts broken-api
 #                                bad-migration  – adds a migration with invalid SQL
@@ -107,7 +107,7 @@ scenario() {
   git -C "$DEV" pull -q origin main
   case "$1" in
     migration)
-      cat > "$DEV/apps/api/db/migrations/00008_drill_marker.sql" <<'SQL'
+      cat > "$DEV/apps/api/db/migrations/00090_drill_marker.sql" <<'SQL'
 -- Drill-only additive migration: proves update.sh runs migrations and that rollback keeps working.
 -- +goose Up
 CREATE TABLE drill_marker (id integer PRIMARY KEY, note text NOT NULL);
@@ -115,7 +115,7 @@ INSERT INTO drill_marker VALUES (1, 'added by the update drill');
 -- +goose Down
 DROP TABLE drill_marker;
 SQL
-      push "drill: additive migration 00008";;
+      push "drill: additive migration 00090";;
     broken-api)
       sed -i 's|^ENTRYPOINT \["/usr/local/bin/blog-api"\]|ENTRYPOINT ["/bin/false"]|' "$DEV/apps/api/Dockerfile"
       push "drill: api that cannot start";;
@@ -123,10 +123,10 @@ SQL
       sed -i 's|^ENTRYPOINT \["/bin/false"\]|ENTRYPOINT ["/usr/local/bin/blog-api"]|' "$DEV/apps/api/Dockerfile"
       push "drill: api fixed";;
     bad-migration)
-      printf -- '-- +goose Up\nCREATE TABLE broken (;\n-- +goose Down\nSELECT 1;\n' > "$DEV/apps/api/db/migrations/00009_drill_broken.sql"
+      printf -- '-- +goose Up\nCREATE TABLE broken (;\n-- +goose Down\nSELECT 1;\n' > "$DEV/apps/api/db/migrations/00091_drill_broken.sql"
       push "drill: invalid migration";;
     drop-bad-migration)
-      git -C "$DEV" rm -q apps/api/db/migrations/00009_drill_broken.sql
+      git -C "$DEV" rm -q apps/api/db/migrations/00091_drill_broken.sql
       push "drill: remove invalid migration";;
     unreleased)
       date -u +%FT%TZ >> "$DEV/docs/drill-unreleased.txt"

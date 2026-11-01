@@ -1,44 +1,45 @@
-/* Design tokens (UI/UX §2.2; colour refresh P8-B8, palette B "墨绿青蓝" P8-B10). Text colours meet WCAG AA (4.5:1) on --card and --bg;
-   --amber / --teal (a sky blue in palette B) / --violet are low-saturation accents for categories, tags and small highlights only.
-   --brand-gradient is used for thin lines (card hover, profile band, reading progress), never large areas. */
+/* Design tokens (UI/UX §2.2). P8-B12: blue palette of the approved mock-up — white cards on a light grey page,
+   one technology blue (#2563EB) for buttons, links, the active navigation and category chips; tags are neutral
+   grey chips. Dark mode uses a deep navy page with lighter blue text accents. Every text pair is >= 4.5:1. */
 :root {
-  --bg: #f4f7f6; --card: #ffffff; --text: #13201d; --muted: #566963; --border: #dfe7e4; --border-strong: #c9d6d2;
-  --accent: #0f766e; --accent-soft: #e5f5f2; --accent-border: #c3e7e0; --on-accent: #ffffff;
+  --bg: #f5f7fa; --card: #ffffff; --text: #1d2433; --muted: #5f6b7c; --border: #e6e9ef; --border-strong: #d3d9e2;
+  --accent: #2563eb; --accent-soft: #eaf1ff; --accent-border: #c9dafc; --on-accent: #ffffff;
+  --btn-bg: #2563eb; --btn-fg: #ffffff; --chip-fg: #2563eb; --chip-bg: #eaf1ff; --tag-fg: #4b5563; --tag-bg: #f1f3f6;
   --amber: #a35a06; --amber-soft: #fcf1e1; --teal: #0b6889; --teal-soft: #e3f2f8; --violet: #5a52c4; --violet-soft: #efeefb;
-  --code-bg: #f1f6f4; --shadow: 0 1px 2px rgba(16, 32, 29, .04); --shadow-hover: 0 10px 28px rgba(15, 60, 52, .10);
-  --brand-gradient: linear-gradient(90deg, #14b8a6, #38bdf8 55%, #f59e0b);
-  --title-bar: linear-gradient(180deg, #14b8a6, #38bdf8);
-  --profile-band: linear-gradient(120deg, #ddf3ee, #e8f4f8 55%, #fcf0dd);
-  --mark-bg: #fdecc8;
+  --code-bg: #f5f7fa; --shadow: 0 1px 2px rgba(16, 24, 40, .04); --shadow-hover: 0 8px 24px rgba(16, 24, 40, .08);
+  --header-bg: rgba(255, 255, 255, .92); --mark-bg: #fdecc8;
   --success: #16803c; --success-bg: #ecfdf3; --warning: #b45309; --warning-bg: #fffbeb;
   --error: #b42318; --error-bg: #fef3f2; --info-bg: #f2f6ff;
-  --radius: 12px; --focus: 0 0 0 3px rgba(15, 118, 110, .35);
+  --radius: 10px; --focus: 0 0 0 3px rgba(37, 99, 235, .3);
   color-scheme: light;
-  font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  /* Named sans-serif fonts first: phones with a custom system font (often a Kai/Song style) would otherwise
+     render the page with it through system-ui (seen on an Android phone in P8-B11). */
+  font-family: "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC",
+    "Microsoft YaHei", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   color: var(--text); background: var(--bg); line-height: 1.75;
 }
 /* Dark: explicit choice (data-theme="dark") or the system preference unless "light" was chosen (UI/UX §2.2, PRD 4.2). */
 :root[data-theme="dark"] {
-  --bg: #0c1312; --card: #131d1b; --text: #e7efed; --muted: #93a7a2; --border: #21302d; --border-strong: #2e423e;
-  --accent: #2dd4bf; --accent-soft: #0f2a27; --accent-border: #1d4a44; --on-accent: #0c1312;
-  --amber: #f5b04a; --amber-soft: #2a2214; --teal: #62c6ee; --teal-soft: #0f2632; --violet: #aaa4ff; --violet-soft: #1e1c38;
-  --code-bg: #0a1110; --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-hover: 0 10px 28px rgba(0, 0, 0, .42);
-  --profile-band: linear-gradient(120deg, #0f2f2b, #12283a 55%, #2b2417);
-  --mark-bg: #4a3b10;
+  --bg: #0b0f19; --card: #121a2b; --text: #e6e9ef; --muted: #9aa4b5; --border: #1f2a3d; --border-strong: #2c3a52;
+  --accent: #6aa4ff; --accent-soft: #17284a; --accent-border: #2a4a80; --on-accent: #0b0f19;
+  --btn-bg: #2563eb; --btn-fg: #ffffff; --chip-fg: #7fb0ff; --chip-bg: #17284a; --tag-fg: #c3cad6; --tag-bg: #1c2638;
+  --amber: #f5b04a; --amber-soft: #2a2214; --teal: #4fd8c4; --teal-soft: #102a2c; --violet: #aaa4ff; --violet-soft: #1e1c38;
+  --code-bg: #0e1524; --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-hover: 0 8px 24px rgba(0, 0, 0, .45);
+  --header-bg: rgba(18, 26, 43, .92); --mark-bg: #4a3b10;
   --success: #4ade80; --success-bg: #0f2a1a; --warning: #fbbf24; --warning-bg: #2b2210;
-  --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(45, 212, 191, .45);
+  --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(106, 164, 255, .45);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0c1312; --card: #131d1b; --text: #e7efed; --muted: #93a7a2; --border: #21302d; --border-strong: #2e423e;
-    --accent: #2dd4bf; --accent-soft: #0f2a27; --accent-border: #1d4a44; --on-accent: #0c1312;
-    --amber: #f5b04a; --amber-soft: #2a2214; --teal: #62c6ee; --teal-soft: #0f2632; --violet: #aaa4ff; --violet-soft: #1e1c38;
-    --code-bg: #0a1110; --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-hover: 0 10px 28px rgba(0, 0, 0, .42);
-    --profile-band: linear-gradient(120deg, #0f2f2b, #12283a 55%, #2b2417);
-    --mark-bg: #4a3b10;
+    --bg: #0b0f19; --card: #121a2b; --text: #e6e9ef; --muted: #9aa4b5; --border: #1f2a3d; --border-strong: #2c3a52;
+    --accent: #6aa4ff; --accent-soft: #17284a; --accent-border: #2a4a80; --on-accent: #0b0f19;
+    --btn-bg: #2563eb; --btn-fg: #ffffff; --chip-fg: #7fb0ff; --chip-bg: #17284a; --tag-fg: #c3cad6; --tag-bg: #1c2638;
+    --amber: #f5b04a; --amber-soft: #2a2214; --teal: #4fd8c4; --teal-soft: #102a2c; --violet: #aaa4ff; --violet-soft: #1e1c38;
+    --code-bg: #0e1524; --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-hover: 0 8px 24px rgba(0, 0, 0, .45);
+    --header-bg: rgba(18, 26, 43, .92); --mark-bg: #4a3b10;
     --success: #4ade80; --success-bg: #0f2a1a; --warning: #fbbf24; --warning-bg: #2b2210;
-    --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(45, 212, 191, .45);
+    --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(106, 164, 255, .45);
     color-scheme: dark;
   }
 }
@@ -58,6 +59,9 @@ a { color: var(--accent) }
 .auth-subtitle { color: var(--muted); margin: 0 0 20px; font-size: 15px }
 .auth-footer { color: var(--muted); font-size: 15px; margin-top: 20px }
 .auth-links { text-align: right; font-size: 14px; margin: 12px 0 0 }
+.auth-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 16px; font-size: 14px }
+.checkbox { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none }
+.checkbox input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent) }
 .stacked { display: grid; gap: 14px; margin-top: 8px }
 .muted { color: var(--muted); font-size: 14px; margin: 0 }
 
@@ -80,10 +84,10 @@ a { color: var(--accent) }
 
 .button {
   display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px;
-  font: inherit; font-size: 16px; font-weight: 600; color: var(--on-accent); background: var(--accent);
-  border: 1px solid var(--accent); border-radius: 10px; cursor: pointer; text-decoration: none;
+  font: inherit; font-size: 16px; font-weight: 600; color: var(--btn-fg); background: var(--btn-bg);
+  border: 1px solid var(--btn-bg); border-radius: 8px; cursor: pointer; text-decoration: none;
 }
-.button:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, var(--text)); border-color: color-mix(in srgb, var(--accent) 88%, var(--text)) }
+.button:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8 }
 .button:disabled { opacity: .6; cursor: not-allowed }
 .button-block { width: 100% }
 .button-small { min-height: 36px; padding: 0 14px; font-size: 14px }

@@ -35,6 +35,12 @@ type Article struct {
 	WithdrawnAt                pgtype.Timestamptz
 }
 
+type ArticleBookmark struct {
+	UserID    uuid.UUID
+	ArticleID uuid.UUID
+	CreatedAt time.Time
+}
+
 type ArticleDraft struct {
 	ArticleID       uuid.UUID
 	Revision        int64

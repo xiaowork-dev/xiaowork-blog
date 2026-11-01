@@ -6,6 +6,9 @@ const { user, refresh } = useAuth()
 
 const email = ref('')
 const password = ref('')
+// P8-B12 "记住我": on → stay signed in for the configured session lifetime (14 days by default);
+// off → the login ends with the browser session (and at most 12 hours later on the server).
+const remember = ref(true)
 const pending = ref(false)
 const error = ref('')
 const unverified = ref(false)
@@ -15,7 +18,7 @@ async function submit() {
   unverified.value = false
   pending.value = true
   try {
-    await api.post('/api/v1/auth/login', { email: email.value, password: password.value })
+    await api.post('/api/v1/auth/login', { email: email.value, password: password.value, remember_me: remember.value })
     api.resetCsrf() // the CSRF context is now the new session
     await refresh()
     await navigateTo(safeRedirect(route.query.redirect))
@@ -39,13 +42,14 @@ async function submit() {
     <form v-else novalidate @submit.prevent="submit">
       <FormField id="email" v-model="email" label="邮箱" type="email" autocomplete="email" required :maxlength="254" />
       <FormField id="password" v-model="password" label="密码" type="password" autocomplete="current-password" required :maxlength="128" />
+      <div class="auth-row">
+        <label class="checkbox"><input v-model="remember" type="checkbox">记住我</label>
+        <NuxtLink to="/auth/forgot-password">忘记密码？</NuxtLink>
+      </div>
       <p v-if="error" class="alert alert-error" role="alert">{{ error }}</p>
       <button type="submit" class="button button-block" :disabled="pending || !email || !password">
         {{ pending ? '登录中…' : '登录' }}
       </button>
-      <p class="auth-links">
-        <NuxtLink to="/auth/forgot-password">忘记密码？</NuxtLink>
-      </p>
     </form>
     <div v-if="unverified" class="stacked">
       <p class="muted">没有收到验证邮件？可以重新发送：</p>

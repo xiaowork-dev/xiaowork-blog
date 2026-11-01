@@ -13,6 +13,7 @@ const { user } = useAuth()
         <NuxtLink to="/account/profile">个人资料</NuxtLink>
         <NuxtLink to="/account/security">账号安全</NuxtLink>
         <NuxtLink to="/account/comments">我的评论</NuxtLink>
+        <NuxtLink to="/account/bookmarks">我的收藏</NuxtLink>
         <NuxtLink v-if="user?.role === 'ADMIN'" to="/admin">管理后台</NuxtLink>
       </nav>
       <main id="main" class="account-main" tabindex="-1">

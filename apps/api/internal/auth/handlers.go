@@ -272,13 +272,24 @@ func (s *Service) verifyEmail(w http.ResponseWriter, r *http.Request) error {
 
 // ---- login / logout (DD T01 step 5, API-DD §5.6) ----
 
+// shortSessionTTL bounds a login without "remember me" even if the browser keeps its session cookie
+// (session restore).
+const shortSessionTTL = 12 * time.Hour
+
 func (s *Service) login(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		// RememberMe (P8-B12): true or omitted keeps the persistent SESSION_TTL login; false gives a short
+		// session whose cookie ends with the browser session.
+		RememberMe *bool `json:"remember_me"`
 	}
 	if err := httpx.DecodeJSON(w, r, &in); err != nil {
 		return err
+	}
+	ttl, cookieAge := s.cfg.SessionTTL, s.cfg.SessionTTL
+	if in.RememberMe != nil && !*in.RememberMe {
+		ttl, cookieAge = min(shortSessionTTL, s.cfg.SessionTTL), 0
 	}
 	ctx := r.Context()
 	if err := s.limiter.hit(ctx, ruleLoginIP, s.clientIP(r)); err != nil {
@@ -328,14 +339,14 @@ func (s *Service) login(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		return q.CreateSession(ctx, store.CreateSessionParams{
-			ID: uuid.New(), UserID: user.ID, TokenDigest: digest, ExpiresAt: s.now().Add(s.cfg.SessionTTL),
+			ID: uuid.New(), UserID: user.ID, TokenDigest: digest, ExpiresAt: s.now().Add(ttl),
 		})
 	})
 	if err != nil {
 		return err
 	}
-	s.setCookie(w, s.sessionCookieName(), raw, s.cfg.SessionTTL)
-	httpx.LoggerFrom(ctx).Info("user logged in", "user_id", user.ID)
+	s.setCookie(w, s.sessionCookieName(), raw, cookieAge) // 0: a browser-session cookie
+	httpx.LoggerFrom(ctx).Info("user logged in", "user_id", user.ID, "remember", cookieAge > 0)
 	httpx.WriteData(w, http.StatusOK, map[string]any{"user": map[string]any{
 		"id": user.ID, "nickname": user.Nickname, "role": user.Role, "email_verified": true,
 	}})

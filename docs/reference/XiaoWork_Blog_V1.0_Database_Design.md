@@ -263,6 +263,10 @@ erDiagram
 
 `article_id uuid PK/FK articles.id`、`view_count bigint NOT NULL DEFAULT 0 CHECK >= 0`、`updated_at timestamptz`。阅读量仅是**近似页面访问量**，不计作独立访客；应避免 SSR 预取、爬虫、重复刷新等无意义事件直接计数。计数采用原子自增或小批聚合，不能每次访问锁定文章公开正文行。是否引入防重复 Cookie 由后续 API 设计决定。
 
+### 5.10 `article_bookmarks` — 读者收藏（P8-B12，迁移 00008）
+
+`user_id uuid FK users.id ON DELETE CASCADE`、`article_id uuid FK articles.id ON DELETE CASCADE`、`created_at timestamptz NOT NULL DEFAULT now()`，主键 `(user_id, article_id)`；索引 `(user_id, created_at DESC)` 与 `(article_id)`。只追加的新表：回滚到旧版本时旧代码不读它。文章撤回或进入回收站时收藏保留但不在列表中显示，重新公开后恢复显示。
+
 ## 6. 评论表（1）
 
 ### 6.1 `comments`

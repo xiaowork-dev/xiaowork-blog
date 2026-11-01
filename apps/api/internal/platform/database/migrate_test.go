@@ -13,16 +13,16 @@ import (
 	"github.com/xiaowork-dev/xiaowork-blog/apps/api/internal/platform/database/dbtest"
 )
 
-// The 24 tables of DD §3, sorted.
+// The 24 tables of DD §3 plus article_bookmarks (P8-B12, migration 00008), sorted.
 var designTables = []string{
-	"admin_audit_logs", "article_draft_media", "article_draft_tags", "article_drafts", "article_metrics",
+	"admin_audit_logs", "article_bookmarks", "article_draft_media", "article_draft_tags", "article_drafts", "article_metrics",
 	"article_publication_media", "article_publication_tags", "article_publications", "article_slugs", "articles",
 	"auth_rate_windows", "auth_sessions", "auth_tokens", "categories", "comments", "media_assets",
 	"site_navigation_links", "site_settings", "site_social_links", "static_page_media", "static_pages", "tags",
 	"user_profiles", "users",
 }
 
-const latestVersion = 7
+const latestVersion = 8
 
 func publicTables(t *testing.T, pool *pgxpool.Pool) []string {
 	t.Helper()
@@ -138,7 +138,7 @@ func TestFailedMigrationIsAtomic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fsys["00008_broken.sql"] = &fstest.MapFile{Data: []byte(`-- +goose Up
+	fsys["00009_broken.sql"] = &fstest.MapFile{Data: []byte(`-- +goose Up
 CREATE TABLE p1_broken_probe (id integer);
 SELECT 1 / 0;
 -- +goose Down
