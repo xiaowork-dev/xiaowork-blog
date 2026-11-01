@@ -106,7 +106,7 @@ onMounted(async () => {
     { tag: [t.emphasis], fontStyle: 'italic' },
     { tag: [t.strikethrough], textDecoration: 'line-through' },
     { tag: [t.link, t.url], color: 'var(--accent)' },
-    { tag: [t.monospace], color: 'var(--violet)' },
+    { tag: [t.monospace], color: 'var(--amber)' },
     { tag: [t.quote], color: 'var(--muted)', fontStyle: 'italic' },
     { tag: [t.list], color: 'var(--teal)' },
     { tag: [t.processingInstruction, t.meta, t.contentSeparator], color: 'var(--muted)' },

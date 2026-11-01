@@ -1,37 +1,44 @@
-/* Design tokens (UI/UX §2.2; colour refresh P8-B8). Text colours meet WCAG AA (4.5:1) on --card and --bg;
-   --amber / --teal / --violet are low-saturation accents for categories, tags and small highlights only.
+/* Design tokens (UI/UX §2.2; colour refresh P8-B8, palette B "墨绿青蓝" P8-B10). Text colours meet WCAG AA (4.5:1) on --card and --bg;
+   --amber / --teal (a sky blue in palette B) / --violet are low-saturation accents for categories, tags and small highlights only.
    --brand-gradient is used for thin lines (card hover, profile band, reading progress), never large areas. */
 :root {
-  --bg: #f5f7fb; --card: #ffffff; --text: #141a26; --muted: #5b6678; --border: #e2e7ef; --border-strong: #cfd7e3;
-  --accent: #2a62d5; --accent-soft: #eef3fe; --accent-border: #cddbfb; --on-accent: #ffffff;
-  --amber: #a85a05; --amber-soft: #fdf3e4; --teal: #0b766c; --teal-soft: #e6f6f3; --violet: #6a4bd4; --violet-soft: #f1edfd;
-  --code-bg: #f4f6fa; --shadow: 0 1px 2px rgba(16, 24, 40, .04); --shadow-hover: 0 10px 28px rgba(31, 55, 105, .10);
-  --brand-gradient: linear-gradient(90deg, #4f8cff, #2dd4bf 60%, #f59e0b);
+  --bg: #f4f7f6; --card: #ffffff; --text: #13201d; --muted: #566963; --border: #dfe7e4; --border-strong: #c9d6d2;
+  --accent: #0f766e; --accent-soft: #e5f5f2; --accent-border: #c3e7e0; --on-accent: #ffffff;
+  --amber: #a35a06; --amber-soft: #fcf1e1; --teal: #0b6889; --teal-soft: #e3f2f8; --violet: #5a52c4; --violet-soft: #efeefb;
+  --code-bg: #f1f6f4; --shadow: 0 1px 2px rgba(16, 32, 29, .04); --shadow-hover: 0 10px 28px rgba(15, 60, 52, .10);
+  --brand-gradient: linear-gradient(90deg, #14b8a6, #38bdf8 55%, #f59e0b);
+  --title-bar: linear-gradient(180deg, #14b8a6, #38bdf8);
+  --profile-band: linear-gradient(120deg, #ddf3ee, #e8f4f8 55%, #fcf0dd);
+  --mark-bg: #fdecc8;
   --success: #16803c; --success-bg: #ecfdf3; --warning: #b45309; --warning-bg: #fffbeb;
   --error: #b42318; --error-bg: #fef3f2; --info-bg: #f2f6ff;
-  --radius: 12px; --focus: 0 0 0 3px rgba(42, 98, 213, .35);
+  --radius: 12px; --focus: 0 0 0 3px rgba(15, 118, 110, .35);
   color-scheme: light;
   font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   color: var(--text); background: var(--bg); line-height: 1.75;
 }
 /* Dark: explicit choice (data-theme="dark") or the system preference unless "light" was chosen (UI/UX §2.2, PRD 4.2). */
 :root[data-theme="dark"] {
-  --bg: #0b1020; --card: #121a2a; --text: #e8edf6; --muted: #9aa5b8; --border: #22304a; --border-strong: #31425f;
-  --accent: #6c9dff; --accent-soft: #17264a; --accent-border: #2c4680; --on-accent: #0b1020;
-  --amber: #f5b04a; --amber-soft: #2c2213; --teal: #4fd8c4; --teal-soft: #102a2c; --violet: #ab9cff; --violet-soft: #211d40;
-  --code-bg: #0d1424; --shadow: 0 1px 2px rgba(0, 0, 0, .25); --shadow-hover: 0 10px 28px rgba(0, 0, 0, .38);
+  --bg: #0c1312; --card: #131d1b; --text: #e7efed; --muted: #93a7a2; --border: #21302d; --border-strong: #2e423e;
+  --accent: #2dd4bf; --accent-soft: #0f2a27; --accent-border: #1d4a44; --on-accent: #0c1312;
+  --amber: #f5b04a; --amber-soft: #2a2214; --teal: #62c6ee; --teal-soft: #0f2632; --violet: #aaa4ff; --violet-soft: #1e1c38;
+  --code-bg: #0a1110; --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-hover: 0 10px 28px rgba(0, 0, 0, .42);
+  --profile-band: linear-gradient(120deg, #0f2f2b, #12283a 55%, #2b2417);
+  --mark-bg: #4a3b10;
   --success: #4ade80; --success-bg: #0f2a1a; --warning: #fbbf24; --warning-bg: #2b2210;
-  --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(108, 157, 255, .45);
+  --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(45, 212, 191, .45);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1020; --card: #121a2a; --text: #e8edf6; --muted: #9aa5b8; --border: #22304a; --border-strong: #31425f;
-    --accent: #6c9dff; --accent-soft: #17264a; --accent-border: #2c4680; --on-accent: #0b1020;
-    --amber: #f5b04a; --amber-soft: #2c2213; --teal: #4fd8c4; --teal-soft: #102a2c; --violet: #ab9cff; --violet-soft: #211d40;
-    --code-bg: #0d1424; --shadow: 0 1px 2px rgba(0, 0, 0, .25); --shadow-hover: 0 10px 28px rgba(0, 0, 0, .38);
+    --bg: #0c1312; --card: #131d1b; --text: #e7efed; --muted: #93a7a2; --border: #21302d; --border-strong: #2e423e;
+    --accent: #2dd4bf; --accent-soft: #0f2a27; --accent-border: #1d4a44; --on-accent: #0c1312;
+    --amber: #f5b04a; --amber-soft: #2a2214; --teal: #62c6ee; --teal-soft: #0f2632; --violet: #aaa4ff; --violet-soft: #1e1c38;
+    --code-bg: #0a1110; --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-hover: 0 10px 28px rgba(0, 0, 0, .42);
+    --profile-band: linear-gradient(120deg, #0f2f2b, #12283a 55%, #2b2417);
+    --mark-bg: #4a3b10;
     --success: #4ade80; --success-bg: #0f2a1a; --warning: #fbbf24; --warning-bg: #2b2210;
-    --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(108, 157, 255, .45);
+    --error: #f87171; --error-bg: #2d1414; --info-bg: #13203a; --focus: 0 0 0 3px rgba(45, 212, 191, .45);
     color-scheme: dark;
   }
 }

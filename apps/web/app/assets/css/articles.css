@@ -112,7 +112,7 @@
   background: color-mix(in srgb, var(--accent-soft) 70%, transparent); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0;
 }
 .md-body blockquote p { margin: .3em 0 }
-.md-body code { padding: .12em .4em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86em; color: var(--violet); background: var(--violet-soft); border-radius: 5px }
+.md-body code { padding: .12em .4em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86em; color: var(--amber); background: var(--amber-soft); border-radius: 5px }
 .md-body pre { padding: 14px 18px; overflow-x: auto; border-radius: 12px; background: var(--code-bg); border: 1px solid var(--border); font-size: 14px; line-height: 1.7; tab-size: 4 }
 .md-body pre code { padding: 0; color: inherit; font-size: inherit; background: none }
 .code-block pre { background: transparent }

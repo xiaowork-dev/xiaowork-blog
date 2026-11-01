@@ -10,9 +10,7 @@
   background: transparent; border: 1px solid transparent; border-radius: 10px; cursor: pointer; text-decoration: none;
 }
 .icon-button:hover { background: var(--accent-soft); color: var(--accent) }
-mark { background: var(--warning-bg); color: inherit; padding: 0 1px; border-radius: 3px }
-:root[data-theme="dark"] mark { background: #4a3b10 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) mark { background: #4a3b10 } }
+mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius: 3px }
 
 /* ---- header ---- */
 .site-header { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--card) 92%, transparent); border-bottom: 1px solid var(--border); backdrop-filter: saturate(1.4) blur(8px) }
@@ -21,7 +19,7 @@ mark { background: var(--warning-bg); color: inherit; padding: 0 1px; border-rad
 .main-nav { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0 }
 .main-nav a { padding: 8px 12px; border-radius: 8px; color: var(--muted); font-size: 15px; text-decoration: none; white-space: nowrap }
 .main-nav a:hover { color: var(--text); background: var(--bg) }
-.main-nav a.active { color: var(--accent); background: var(--accent-soft); font-weight: 600 }
+.main-nav a.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent) }
 .header-tools { display: flex; align-items: center; gap: 4px; margin-left: auto }
 .account-links { display: flex; align-items: center; gap: 12px; margin-left: 8px; font-size: 15px }
 .account-links a { text-decoration: none }
@@ -56,7 +54,7 @@ mark { background: var(--warning-bg); color: inherit; padding: 0 1px; border-rad
 }
 .profile-card::before {
   content: ""; position: absolute; inset: 0 0 auto; height: 76px; pointer-events: none;
-  background: linear-gradient(120deg, color-mix(in srgb, #4f8cff 20%, transparent), color-mix(in srgb, #2dd4bf 16%, transparent) 55%, color-mix(in srgb, #f59e0b 12%, transparent));
+  background: var(--profile-band);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
 .profile-card > * { position: relative }
@@ -78,7 +76,7 @@ mark { background: var(--warning-bg); color: inherit; padding: 0 1px; border-rad
 
 /* ---- section headings and states ---- */
 .section-title { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; font-size: 24px; line-height: 1.35 }
-.section-title::before { content: ""; flex: none; width: 4px; height: 1em; border-radius: 4px; background: linear-gradient(180deg, #4f8cff, #2dd4bf) }
+.section-title::before { content: ""; flex: none; width: 4px; height: 1em; border-radius: 4px; background: var(--title-bar) }
 .section-desc { margin: -8px 0 16px; color: var(--muted); font-size: 14px }
 .breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--muted); font-size: 14px }
 .breadcrumb a { color: var(--muted); text-decoration: none }
@@ -123,7 +121,7 @@ mark { background: var(--warning-bg); color: inherit; padding: 0 1px; border-rad
   display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12.5px; font-weight: 600; line-height: 24px;
   color: var(--text); text-decoration: none; background: var(--card); border: 1px solid var(--border); border-radius: 999px; white-space: nowrap;
 }
-.card-category::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(135deg, #4f8cff, #2dd4bf) }
+.card-category::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--amber) }
 a.card-category:hover { color: var(--accent); border-color: var(--accent-border); background: var(--accent-soft) }
 .card-category.is-none { color: var(--muted); font-weight: 500 }
 .card-category.is-none::before { background: var(--border-strong) }
