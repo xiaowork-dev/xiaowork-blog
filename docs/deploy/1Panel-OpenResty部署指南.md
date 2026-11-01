@@ -198,3 +198,4 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 3 http://<服务器公网IP>
 | 登录或评论返回 403 | `PUBLIC_BASE_URL` 必须与浏览器地址完全一致；`Host` 必须是域名；`X-Forwarded-Proto` 必须是 https |
 | 所有人共享限流 | OpenResty 没有传 `X-Forwarded-For`，或前面有 CDN（见第 6 节） |
 | 上传图片返回 413 | 网站配置中加 `client_max_body_size 12m;` |
+| 收不到注册 / 找回密码邮件，日志为 `smtp dial: … i/o timeout` | VPS 服务商封锁了出站邮件端口（25/465/587）。请服务商开放，或改用邮件服务商的备用端口（如 `SMTP_PORT=2465` + `SMTP_TLS=tls`），详见运维手册 §13 |
