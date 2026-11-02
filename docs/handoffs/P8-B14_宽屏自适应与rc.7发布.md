@@ -74,8 +74,22 @@
 
 ## 10. 最终验收结论
 
-见第 11 节。
+**发布与上线完成，等待负责人在大屏上确认效果**，详见第 11 节。
 
 ## 11. 发布与上线结果（发布后补记）
 
-（待补）
+- 提交 `b06d626`（代码、文档与发布说明），CI #57 通过（web、api、db-integration、compose、deploy）。
+- 标签 `v1.0.0-rc.7`：附注标签，对象 `32364f3`，指向 `b06d626f255dfbda379226e40506d6ce5ab79dbe`。
+- GitHub Release id `431174630`：Pre-release，非草稿，不可变，正文与 `docs/releases/v1.0.0-rc.7.md` 一致；`/releases/latest` 仍为 404（没有正式版）。
+- 服务器（`xiaowork-main`，负责人已授权）：
+  - 手动备份 `20261102T073144Z-before-rc7`；
+  - `manage.sh update v1.0.0-rc.7 --pre --yes` 自动备份 `20261102T073200Z-pre-update-b06d626f255d`，输出“更新成功：b06d626f255d（数据库结构版本 8 → 8）”。
+- 线上验证：
+  - 当前 rc.7、上一版本 rc.6，结构版本 8；api / web / db healthy；
+  - 端口仍只绑定 `127.0.0.1`；SMTP 仍为 `us2.workspace.org:2465`；更新后 API 无错误日志；
+  - `/`、`/api/v1/site`、`/rss.xml`、`/sitemap.xml`、`/auth/login`、`/posts/vps` 均 200，游客访问 `/account/bookmarks` 302；
+  - 线上 CSS 含 `--page-max` 与空侧栏规则；
+  - 实测内容宽度：首页在 2560 窗口为 1680 px，在 1366 窗口为 1200 px；文章页（无侧栏）为 1100 px，居中。
+- 回滚：`sudo deploy/manage.sh rollback`（回到 rc.6，无迁移，安全）。
+
+**验收结论**：rc.7 已发布并上线，自动化检查全部通过；宽度效果由负责人在 27 寸显示器上确认。
