@@ -14,7 +14,7 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 
 /* ---- header ---- */
 .site-header { position: sticky; top: 0; z-index: 30; background: var(--header-bg); border-bottom: 1px solid var(--border); backdrop-filter: saturate(1.4) blur(8px) }
-.site-header-inner { max-width: var(--page-max); margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 28px }
+.site-header-inner { max-width: none; padding: 0 var(--gutter); height: 60px; display: flex; align-items: center; gap: 28px }
 .site-header .brand { display: inline-flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 750; color: var(--text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
 .main-nav { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0 }
 .main-nav a { padding: 7px 12px; border-radius: 8px; color: var(--muted); font-size: 15px; text-decoration: none; white-space: nowrap }
@@ -40,7 +40,7 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 
 /* ---- two-column shell ---- */
 .blog-layout {
-  flex: 1; width: 100%; max-width: var(--page-max); margin: 0 auto; padding: 32px 24px 56px;
+  flex: 1; width: 100%; max-width: none; padding: 32px var(--gutter) 56px;
   display: grid; grid-template-columns: 256px minmax(0, 1fr); gap: 40px; align-items: start;
 }
 .blog-side { position: sticky; top: 88px; max-height: calc(100vh - 104px); overflow-y: auto }
@@ -94,7 +94,9 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 /* P8-B12 (approved mock-up): compact cards — cover on the left (16:10, fixed box so nothing jumps), title,
    two-line summary, the category as a blue chip followed by grey tag chips, then date, views and the
    bookmark button. Hover: border and a soft shadow, no movement. */
-.article-list { display: grid; gap: 14px }
+/* Fluid list (P8-B14): one column on ordinary screens, more columns of cards as the window widens
+   (auto-fit, so a short list still fills the row). */
+.article-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 620px), 1fr)); gap: 14px; align-items: start }
 .article-card {
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 16px;
   background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
@@ -186,13 +188,16 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 /* ---- article page ---- */
 /* P8-B12: own shell (layouts/post.vue) — the article plus a right sidebar with the table of contents and
    related articles; below 1024 px the sidebar moves inline (TOC on top, related below the article). */
-.post-shell { flex: 1; width: 100%; max-width: min(var(--page-max), 1440px); margin: 0 auto; padding: 28px 24px 56px }
+.post-shell { flex: 1; width: 100%; max-width: none; padding: 28px var(--gutter) 56px }
 .post-shell:focus { outline: none; box-shadow: none }
 .post-layout { display: grid; grid-template-columns: minmax(0, 1fr) 272px; gap: 24px; align-items: start }
 .post-main { min-width: 0 }
-/* No TOC and no related articles: drop the empty sidebar and centre the article (P8-B14). */
+/* No TOC and no related articles: drop the empty sidebar so the article takes the whole row (P8-B14). */
 .post-side:empty { display: none }
-.post-layout:has(> .post-side:empty) { grid-template-columns: minmax(0, 1fr); max-width: 1100px; margin: 0 auto }
+.post-layout:has(> .post-side:empty) { grid-template-columns: minmax(0, 1fr); max-width: none }
+/* The article card fills the row; its text stays centred at about two thirds of the card so lines do not run
+   across the whole screen, and still grows with the window. */
+.post-article > * { max-width: max(900px, 66%); margin-left: auto; margin-right: auto }
 .post-article { min-width: 0; padding: 32px 36px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow) }
 .post-title { margin: 4px 0 10px; font-size: 28px; font-weight: 750; line-height: 1.4; overflow-wrap: anywhere }
 .post-meta .post-category { color: var(--accent) }
@@ -267,8 +272,7 @@ mark { background: var(--mark-bg); color: inherit; padding: 0 1px; border-radius
 .error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 16px }
 
 /* ---- responsive ---- */
-/* Wide screens (P8-B14): the page grows with the window (--page-max); the side column, card covers and
-   reading text grow a little with it. The article page stops at 1440 px to keep lines readable. */
+/* Wide screens (P8-B14): the side column, card covers and reading text grow a little with the window. */
 @media (min-width: 1600px) {
   .blog-layout { grid-template-columns: 288px minmax(0, 1fr); gap: 48px }
   .article-card.has-cover { grid-template-columns: 260px minmax(0, 1fr); gap: 22px }

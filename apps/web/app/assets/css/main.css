@@ -11,8 +11,8 @@
   --success: #16803c; --success-bg: #ecfdf3; --warning: #b45309; --warning-bg: #fffbeb;
   --error: #b42318; --error-bg: #fef3f2; --info-bg: #f2f6ff;
   --radius: 10px; --focus: 0 0 0 3px rgba(37, 99, 235, .3);
-  /* Page width follows the screen (P8-B14): 1200 px up to a 1500 px window, then 80% of it, capped at 1680 px. */
-  --page-max: clamp(1200px, 80vw, 1680px);
+  /* Fluid page (P8-B14): every public page fills the window like an app; only the side gutters grow with it. */
+  --gutter: clamp(16px, 2.5vw, 48px);
   color-scheme: light;
   /* Named sans-serif fonts first: phones with a custom system font (often a Kai/Song style) would otherwise
      render the page with it through system-ui (seen on an Android phone in P8-B11). */
@@ -51,7 +51,7 @@ a { color: var(--accent) }
 :focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
 
-.shell { max-width: var(--page-max); margin: auto; padding: 0 24px }
+.shell { max-width: none; margin: auto; padding: 0 var(--gutter) }
 .who { color: var(--muted); max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 
 /* Auth pages: centred narrow card (UI/UX §6.1). */
